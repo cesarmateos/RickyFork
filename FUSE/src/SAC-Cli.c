@@ -3,3 +3,7 @@
 #include<commons/log.h>
 #include<commons/string.h>
 #include<commons/config.h>
+
+int main(){
+	return 0;
+}

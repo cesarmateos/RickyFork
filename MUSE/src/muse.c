@@ -5,16 +5,19 @@
 #include<commons/string.h>
 #include<commons/config.h>
 
-typedef struct Page{
-	uint32_t datos
-};
+typedef struct{
+	uint32_t datos;
+}Page;
 
-typedef struct HeapSegment{
-	HeapMetadata heapMetadata,
+typedef struct{
+	uint32_t size;
+	bool isFree;
+}HeapMetadata;
 
-};
+typedef struct{
+	HeapMetadata heapMetadata;
+}HeapSegment;
 
-typedef struct HeapMetadata{
-	uint32_t size,
-	Bool isFree
-};
+int main(){
+	return 0;
+}
