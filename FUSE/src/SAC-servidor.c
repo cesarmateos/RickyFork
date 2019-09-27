@@ -52,7 +52,7 @@ void seleccionarHD(char path[]){
 
 int main(){
 
-	logger = log_create("SAC-Servicor.log","SAC-Servidor",true,LOG_LEVEL_INFO);
+	logger = log_create("SAC-Servicor.log","SAC-servidor.c",1,LOG_LEVEL_INFO);
 
 
 	return 0;
