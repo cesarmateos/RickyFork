@@ -19,5 +19,7 @@ typedef struct{
 }HeapSegment;
 
 int main(){
+	t_log* logger
+	logger = log_create("muse.log","muse.c",1,LOG_LEVEL_INFO);
 	return 0;
 }
