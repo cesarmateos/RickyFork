@@ -18,7 +18,7 @@ void empujar(ptrNodoPila *ptrcima, int valor){
 			ptrNuevo->ptrsiguiente = *ptrcima;
 			ptrcima = ptrNuevo;
 	}else{
-		printf("memoria insuficiente");
+		printf("memoria llena");
 	}
 }
 
