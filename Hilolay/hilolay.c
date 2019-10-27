@@ -205,3 +205,14 @@ void lib_summarize_burst() {
     current_ult->execution_time += last_burst;
     current_ult->last_burst = last_burst;
 }
+struct semaforo{
+	char identificador;
+	int valor;
+};
+typedef struct semaforo Semaforo
+void suse_signal(Semaforo sem){
+	sem.valor = sem.valor + 1;
+}
+void suse_wait(Semaforo sem){
+	sem.valor = sem.valor - 1;
+}

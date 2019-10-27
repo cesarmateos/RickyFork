@@ -22,6 +22,7 @@ void empujar(ptrNodoPila *ptrcima, int valor){
 	}
 }
 
+
 int main(){
 	t_log* logger;
 	ptrNodoPila ready = NULL;
