@@ -1,5 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include<stdio.h>
+#include<stdlib.h>
 #include<commons/log.h>
 #include<commons/string.h>
 #include<commons/bitarray.h>
@@ -34,20 +34,59 @@ typedef struct{
 	BlockSize bloqueDatos;
 }HD;
 
+char discoActual[];
 
-void crearHD(char nombre[],int tamanio){
-	int tamanioMaximoDeHD = 16384; //en Gigabytes
-	if(tamanio > tamanioMaximoDeHD){
+void crearHD(char nombreHD[],int tamanioHD){
+	int tamanioMaximoDeHD = 16384; //en bytes
+	if(tamanioHD > tamanioMaximoDeHD){
 		printf("El tamaño del disco supera el máximo soportado\n");
-		log_error(logger, "No se pudo crear disco rígido debido a que superaba el tamaño máximo soportado\n");
+		log_error(logger, "No se pudo crear disco de almacenamiento debido a que superaba el tamaño máximo soportado\n");
 	}else{
-		printf("Disco creado con éxtito\n");
-		log_info(logger,"Disco %s de %d Gigabytes creado exitosamente.\n",nombre,tamanio);
+		FILE  *disco;
+		disco = fopen(("%s",nombreHD),"wb");
+		if(!disco){
+			printf("Error al crear el disco\n");
+		}else{
+
+		Header encabezado;
+		strcopy(encabezado.identificador,"SAC");
+		encabezado.identificador = 1;
+		encabezado.bloqueInicioBitmap = 1;
+		strcopy(encabezado.tamanio, "n");
+
+		char str[tamanioHD*1024*1024*1024];
+		fwrite(str,sizeof(char),sizeof(str),disco);
+		fflush(disco);
+		fclose(disco);
+		printf("Disco  %s de %d Gigabytes creado exitosamente.\n",nombreHD,tamanioHD)
+		log_info(logger,"Disco %s de %d Gigabytes creado exitosamente.\n",nombreHD,tamanioHD);
+		}
 	}
 }
 
+void formatearHD(char nombreHD[]){
+	FILE *disco;
+	disco = fopen(("%s",nombreHD),"r+b");
+	if(!disco){
+				printf("No se pudo abrir o no existe el disco %s.\n",nombreHD);
+			}else{
+
+			}
+
+}
+
 void seleccionarHD(char path[]){
+	discoActual = path;
 	log_info(logger, "Se seleccionó el disco %s.\n",path);
+}
+
+void escribir(){
+}
+
+void leer(){
+}
+
+void borrar(){
 }
 
 int main(){
