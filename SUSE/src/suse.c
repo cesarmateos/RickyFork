@@ -9,20 +9,18 @@ struct nodoPila{
 	struct nodoPila *ptrsiguiente;
 };
 typedef struct nodoPila NodoPila;
-typedef struct NodoPila *ptrNodoPila
+typedef NodoPila *ptrNodoPila;
 void empujar(ptrNodoPila *ptrcima, int valor){
 	ptrNodoPila ptrNuevo;
 	ptrNuevo = malloc(sizeof(NodoPila));
 	if(ptrcima != NULL){
 		ptrNuevo->dato = valor;
-			ptrNuevo->ptrsiguiente = *ptrcima;
-			ptrcima = ptrNuevo;
+		ptrNuevo->ptrsiguiente = *ptrcima;
+		ptrcima = ptrNuevo;
 	}else{
 		printf("memoria llena");
 	}
 }
-
-
 int main(){
 	t_log* logger;
 	ptrNodoPila ready = NULL;

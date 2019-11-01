@@ -209,10 +209,13 @@ struct semaforo{
 	char identificador;
 	int valor;
 };
-typedef struct semaforo Semaforo
+typedef struct semaforo Semaforo;
 void suse_signal(Semaforo sem){
 	sem.valor = sem.valor + 1;
 }
 void suse_wait(Semaforo sem){
 	sem.valor = sem.valor - 1;
+}
+int suse_create(void (*f)(void)){
+	return th_create((*f)());
 }
