@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include "hilolay.h"
+#include "kemmens/SocketCommons.h"
+
 
 /* Initializes the ULT library
  * The first thread will be... your main function! */
@@ -210,6 +212,11 @@ struct semaforo{
 	int valor;
 };
 typedef struct semaforo Semaforo;
+
+void hilolay_init(){
+	SocketCommons_SendMessageString(4000,"");
+
+}
 void suse_signal(Semaforo sem){
 	sem.valor = sem.valor + 1;
 }
@@ -217,5 +224,8 @@ void suse_wait(Semaforo sem){
 	sem.valor = sem.valor - 1;
 }
 int suse_create(void (*f)(void)){
+
+
+
 	return th_create((*f)());
 }

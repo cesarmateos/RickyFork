@@ -4,15 +4,25 @@
 #include<commons/string.h>
 #include<commons/bitarray.h>
 #include<commons/config.h>
-struct nodoPila{
+
+struct nodoCola{
 	int dato;
-	struct nodoPila *ptrsiguiente;
+	struct nodoCola *ptrsiguiente;
 };
-typedef struct nodoPila NodoPila;
-typedef NodoPila *ptrNodoPila;
-void empujar(ptrNodoPila *ptrcima, int valor){
-	ptrNodoPila ptrNuevo;
-	ptrNuevo = malloc(sizeof(NodoPila));
+
+struct nodoListaProgramas{
+	struct nodoCola *nodoReady =NULL;
+	struct nodoCola *nodoBlocked=NULL;
+};
+
+typedef struct nodoCola NodoCola;
+typedef NodoCola *ptrNodoCola;
+typedef struct nodoListaProgramas ListaProgramas;
+typedef ListaProgramas *ptrListaProgramas;
+
+void empujar(ptrNodoCola *ptrcima, int valor){
+	ptrNodoCola ptrNuevo;
+	ptrNuevo = malloc(sizeof(NodoCola));
 	if(ptrcima != NULL){
 		ptrNuevo->dato = valor;
 		ptrNuevo->ptrsiguiente = *ptrcima;
@@ -21,10 +31,13 @@ void empujar(ptrNodoPila *ptrcima, int valor){
 		printf("memoria llena");
 	}
 }
+
+
+
 int main(){
 	t_log* logger;
-	ptrNodoPila ready = NULL;
-	ptrNodoPila blocked = NULL;
+	ptrListaProgramas = NULL;
+
 	logger = log_create("suse.log","suse.c",1,LOG_LEVEL_INFO);
 	return 0;
 }
