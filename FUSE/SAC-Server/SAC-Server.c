@@ -5,5 +5,8 @@
 #include<commons/config.h>
 
 int main(){
+
+	printf("Haahaha!\n");
+
 	return 0;
 }
