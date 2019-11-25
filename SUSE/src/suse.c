@@ -13,7 +13,7 @@ struct nodoCola{
 
 struct nodoListaProgramas{
 	struct nodoCola *nodoReady =NULL;
-	struct nodoCola *nodoBlocked=NULL;
+	struct nodoListaProgramas *ptrsiguiente;
 };
 
 typedef struct nodoCola NodoCola;
@@ -21,7 +21,7 @@ typedef NodoCola *ptrNodoCola;
 typedef struct nodoListaProgramas ListaProgramas;
 typedef ListaProgramas *ptrListaProgramas;
 
-void empujar(ptrNodoCola *ptrcima, int valor){
+void empujar(ptrNodoCola *ptrcima, struct TCB valor){
 	ptrNodoCola ptrNuevo;
 	ptrNuevo = malloc(sizeof(NodoCola));
 	if(ptrcima != NULL){
@@ -31,6 +31,17 @@ void empujar(ptrNodoCola *ptrcima, int valor){
 	}else{
 		printf("memoria llena");
 	}
+}
+void empujarAlista(ListaProgramas *ptrcima,NodoCola valor){
+	ListaProgramas ptrNuevo;
+		ptrNuevo = malloc(sizeof(ListaProgramas));
+		if(ptrcima != NULL){
+			ptrNuevo->nodoReady = valor;
+			ptrNuevo->ptrsiguiente = *ptrcima;
+			ptrcima = ptrNuevo;
+		}else{
+			printf("memoria llena");
+		}
 }
 
 
