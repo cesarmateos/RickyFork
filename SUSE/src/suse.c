@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "Hilolay/hilolay.h"
 #include<commons/log.h>
 #include<commons/string.h>
 #include<commons/bitarray.h>
 #include<commons/config.h>
 
 struct nodoCola{
-	int dato;
+	struct TCB dato;
 	struct nodoCola *ptrsiguiente;
 };
 
@@ -36,7 +37,6 @@ void empujar(ptrNodoCola *ptrcima, int valor){
 
 int main(){
 	t_log* logger;
-	ptrListaProgramas = NULL;
 
 	logger = log_create("suse.log","suse.c",1,LOG_LEVEL_INFO);
 	return 0;
