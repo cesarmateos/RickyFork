@@ -1,54 +1,111 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "Hilolay/hilolay.h"
+
 #include<commons/log.h>
 #include<commons/string.h>
 #include<commons/bitarray.h>
 #include<commons/config.h>
 
-struct nodoCola{
-	struct TCB dato;
-	struct nodoCola *ptrsiguiente;
+#include <stdio.h>
+#include <stdlib.h>
+#include <kemmens/SocketServer.h>
+struct nodoPrograma{
+	int id;
+	struct nodoPrograma *ptrsiguiente;
 };
 
-struct nodoListaProgramas{
-	struct nodoCola *nodoReady =NULL;
-	struct nodoListaProgramas *ptrsiguiente;
+struct nodoListaPrograma{
+	struct nodoPrograma programa;
+	struct nodoListaPrograma *ptrsiguiente;
 };
+typedef struct nodoListaPrograma NodoListaPrograma;
+typedef NodoListaPrograma *ptrNodoListaPrograma;
+typedef struct nodoPrograma NodoPrograma;
+typedef NodoPrograma *ptrNodoPrograma;
 
-typedef struct nodoCola NodoCola;
-typedef NodoCola *ptrNodoCola;
-typedef struct nodoListaProgramas ListaProgramas;
-typedef ListaProgramas *ptrListaProgramas;
+void insertar(ptrNodoPrograma *ptrs, int valor){
+	ptrNodoPrograma ptrNuevo;
+	ptrNodoPrograma ptrAnterior;
+	ptrNodoPrograma ptrActual;
+	ptrNuevo = malloc(sizeof(NodoPrograma));
+	if(ptrNuevo != NULL){
+		ptrNuevo->id = valor;
+		ptrNuevo->ptrsiguiente = NULL;
+	ptrAnterior = NULL;
+	ptrActual = ptrs;
+	while(ptrActual != NULL && valor > ptrActual->id){
+		ptrAnterior = ptrActual;
+		ptrActual= ptrActual->ptrsiguiente;
+	}
+	if(ptrAnterior == NULL){
+		ptrNuevo->ptrsiguiente = *ptrs;
+		*ptrs = ptrNuevo;
+	}
+	else{
+		ptrAnterior->ptrsiguiente = ptrNuevo;
+		ptrNuevo->ptrsiguiente = ptrActual;
+	}
 
-void empujar(ptrNodoCola *ptrcima, struct TCB valor){
-	ptrNodoCola ptrNuevo;
-	ptrNuevo = malloc(sizeof(NodoCola));
-	if(ptrcima != NULL){
-		ptrNuevo->dato = valor;
-		ptrNuevo->ptrsiguiente = *ptrcima;
-		ptrcima = ptrNuevo;
-	}else{
-		printf("memoria llena");
+	}
+	else{
+		printf("la memoria esta llena");
 	}
 }
-void empujarAlista(ListaProgramas *ptrcima,NodoCola valor){
-	ListaProgramas ptrNuevo;
-		ptrNuevo = malloc(sizeof(ListaProgramas));
-		if(ptrcima != NULL){
-			ptrNuevo->nodoReady = valor;
-			ptrNuevo->ptrsiguiente = *ptrcima;
-			ptrcima = ptrNuevo;
-		}else{
-			printf("memoria llena");
+
+void eliminar(ptrNodoPrograma *ptrs,int hiloASacar){
+	ptrNodoPrograma ptrtemp;
+	ptrNodoPrograma ptrAnterior;
+	ptrNodoPrograma ptrActual;
+	if(hiloASacar == (*ptrs)->id){
+		ptrtemp = *ptrs;
+		*ptrs = (*ptrs)->ptrsiguiente;
+		free(ptrtemp);
+	}
+	else{
+		ptrAnterior= *ptrs;
+		ptrActual = (*ptrs)->ptrsiguiente;
+		while(ptrActual != NULL && ptrActual->id != hiloASacar){
+			ptrAnterior = ptrActual;
+			ptrActual= ptrActual->ptrsiguiente;
+		}
+		if(ptrActual != NULL){
+			ptrtemp = *ptrActual;
+			ptrAnterior->ptrsiguiente = ptrActual->ptrsiguiente;
+			free(ptrtemp);
+		}
+	}
+}
+void insertarPrograma(ptrNodoListaPrograma ptrs,NodoPrograma valor){
+	ptrNodoListaPrograma ptrNuevo;
+	ptrNodoListaPrograma ptrAnterior;
+	ptrNodoListaPrograma ptrActual;
+	ptrNuevo = malloc(sizeof(NodoPrograma));
+	if(ptrNuevo != NULL){
+		ptrNuevo->programa = valor;
+		ptrNuevo->ptrsiguiente = NULL;
+		ptrAnterior = NULL;
+		ptrActual = ptrs;
+		while(ptrActual != NULL){
+			ptrAnterior = ptrActual;
+			ptrActual= ptrActual->ptrsiguiente;
+		}
+		if(ptrAnterior == NULL){
+			ptrNuevo->ptrsiguiente = *ptrs;
+			*ptrs = ptrNuevo;
+		}
+		else{
+			ptrAnterior->ptrsiguiente = ptrNuevo;
+			ptrNuevo->ptrsiguiente = ptrActual;
+		}
+
+		}
+		else{
+			printf("la memoria esta llena");
 		}
 }
+int main(void) {
 
+	SocketServer_Start("suse",4000);
 
-
-int main(){
-	t_log* logger;
-
-	logger = log_create("suse.log","suse.c",1,LOG_LEVEL_INFO);
-	return 0;
+	return EXIT_SUCCESS;
 }
