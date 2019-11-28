@@ -223,9 +223,8 @@ void suse_signal(Semaforo sem){
 void suse_wait(Semaforo sem){
 	sem.valor = sem.valor - 1;
 }
-int suse_create(void (*f)(void)){
-
-
-
-	return th_create((*f)());
+int suse_create(int hiloAcargar){
+		int socket = socketClient_ConectToServer("4000");
+		SocketCommons_SendData(socket,1,hiloAcargar,sizeof(int));
+		return hiloAcargar;
 }
