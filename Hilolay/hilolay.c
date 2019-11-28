@@ -207,24 +207,26 @@ void lib_summarize_burst() {
     current_ult->execution_time += last_burst;
     current_ult->last_burst = last_burst;
 }
-struct semaforo{
-	char identificador;
-	int valor;
-};
-typedef struct semaforo Semaforo;
-
-void hilolay_init(){
-	SocketCommons_SendMessageString(4000,"");
-
-}
-void suse_signal(Semaforo sem){
-	sem.valor = sem.valor + 1;
-}
-void suse_wait(Semaforo sem){
-	sem.valor = sem.valor - 1;
-}
 int suse_create(int hiloAcargar){
-		int socket = socketClient_ConectToServer("4000");
-		SocketCommons_SendData(socket,1,hiloAcargar,sizeof(int));
-		return hiloAcargar;
+	int socket = socketClient_ConectToServer("4000");
+	SocketCommons_SendData(socket,1,hiloAcargar,sizeof(int));
+	return hiloAcargar;
+
+}
+int suse_close(int hiloAeliminar){
+	int socket = socketClient_ConectToServer("4000");
+		SocketCommons_SendData(socket,1,hiloAeliminar,sizeof(int));
+		return hiloAeliminar;
+}
+int suse_signal(int hilo,char* semaforo){
+	int socket = socketClient_ConectToServer("4000");
+		SocketCommons_SendData(socket,1,hilo,sizeof(int));
+		SocketCommons_SendData(socket,1,semaforo,sizeof(char*));
+		return hilo;
+}
+int suse_wait(int hilo,char* semaforo){
+	int socket = socketClient_ConectToServer("4000");
+		SocketCommons_SendData(socket,1,hilo,sizeof(int));
+		SocketCommons_SendData(socket,1,semaforo,sizeof(char*));
+		return hilo;
 }
