@@ -21,8 +21,28 @@
 #include"kemmens/SocketServer.h"
 #include<fuse.h>
 
+int *bloquesDatos;
+int bloquesBitmap;
+GHeader *miHead;
+FILE *disco;
 
 t_config* leer_config(void);
-t_log* iniciar_logger(void);
+void leerHead(void);
+void iniciarServer(void);
+void cargarAlmacenamiento(void);
+void iniciarLog(void);
+void apagarServer(void);
+
+static int sacGetAttr(const char *path, struct stat *stbuf);
+static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
+static int sacAbrir(const char *path, struct fuse_file_info *fi) ;
+static int sacLeer(const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *fi) ;
+int sacMkdir(const char *path, mode_t mode);
+int sacRmdir(const char *path);
+int sacCrear(const char patu, mode_t mode, struct fuse_file_info *fi);
+int sacEscribir (const char path, const char data, size_t size, off_t offset, struct fuse_file_info *fi) ;
+int sacUnlink(const char *path);
+
+
 
 #endif /* SAC_SERVER_H_ */

@@ -65,7 +65,7 @@ static int sacLeer(const char *path, char *buffer, size_t size, off_t offset, st
 }
 
 int sacMkdir(const char *path, mode_t mode){
-
+	return 0;
 }
 
 int sacRmdir(const char *path){
@@ -101,9 +101,46 @@ t_config* leer_config(void){
 		return config_create("fuse.config");
 }
 
-int main(){
-
+void iniciarLog(void){
 	Logger_CreateLog("SAC.log","SAC-Server",true);
+}
+
+void leerHead(void){
+	unsigned char nombreFS;
+	uint32_t* versionFS;
+	miHead->sac[3] = fread(&nombreFS,sizeof(char),3,disco);
+	Logger_Log(LOG_INFO, "El volumen contiene un FileSystem %s", miHead->sac);
+}
+void cargarAlmacenamiento(void){
+
+	t_config* fuseConfig;
+
+	char* nombreHD;
+
+	fuseConfig = leer_config();
+
+	nombreHD = config_get_string_value(fuseConfig, "DISCO");
+
+	disco = fopen(("%s", nombreHD), "rb+");
+
+	if (!disco) {
+		Logger_Log(LOG_ERROR, "Error al abrir el disco %s", nombreHD);
+	} else {
+		int bloquesTotales;
+
+		fseek(disco, 0, SEEK_END); // busca el final del archivo
+		bloquesTotales = ftell(disco)/ BLOCKSIZE;
+		bloquesBitmap = ((bloquesTotales/8)/BLOCKSIZE) + 1;
+		bloquesDatos = bloquesTotales -1025 -bloquesBitmap;
+		fseek(disco, 0, SEEK_SET); // vuelve al principio
+
+		Logger_Log(LOG_INFO, "Disco  %s cargado exitosamente. Contiene %d bloques de datos", nombreHD, bloquesDatos);
+
+		config_destroy(fuseConfig);
+	}
+}
+
+void iniciarServer(void){
 
 	t_config* fuseConfig;
 
@@ -118,6 +155,24 @@ int main(){
 	SocketServer_ActionsListeners evento;
 
 	SocketServer_ListenForConnection(evento);
+
+	config_destroy(fuseConfig);
+
+}
+
+void apagarServer(void){
+	SocketServer_TerminateAllConnections();
+}
+int main(){
+
+	iniciarLog();
+
+	cargarAlmacenamiento();
+
+	//leerHead();
+
+	iniciarServer();
+	apagarServer();
 
 	return 0;
 }
