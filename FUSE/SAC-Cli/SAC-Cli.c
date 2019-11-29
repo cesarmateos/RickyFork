@@ -15,13 +15,15 @@ int main(){
 	t_config* fuseConfig;
 
 	char* puerto;
-	//int socketConectado;
+	int socketConectado;
 
 	fuseConfig = leer_config();
 
 	puerto = config_get_string_value(fuseConfig, "LISTEN_PORT");
 
-	SocketClient_ConnectToServer(puerto);
+	socketConectado = SocketClient_ConnectToServer(puerto);
+
+	SocketCommons_SendMessageString(socketConectado,"Ehaeha");
 
 	return 0;
 }

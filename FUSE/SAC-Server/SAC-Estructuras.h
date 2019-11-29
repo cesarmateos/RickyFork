@@ -8,6 +8,7 @@
 #ifndef SAC_ESTRUCTURAS_H_
 #define SAC_ESTRUCTURAS_H_
 
+#include<stdint.h>
 
 #define GFILEBYTABLE 1024
 #define GFILEBYBLOCK 1
