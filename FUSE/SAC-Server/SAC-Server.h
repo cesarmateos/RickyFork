@@ -15,6 +15,7 @@
 #include<commons/log.h>
 #include<commons/string.h>
 #include<commons/config.h>
+#include<commons/bitarray.h>
 #include<readline/readline.h>
 #include<time.h>
 #include "SAC-Estructuras.h"
@@ -26,9 +27,10 @@
 
 
 int *bloquesDatosFS;
+int *largoBitmapFS;
 off_t largoAlmacenamiento;
 int disco;
-
+t_bitarray* bitArrayFS;
 
 
 t_config* leer_config(void);
@@ -38,8 +40,15 @@ void cargarAlmacenamiento(void);
 void iniciarLog(void);
 void apagarServer(void);
 
-void leer(int bloque, int offset, void* dato);
-void escribir(int bloque, int offset, void* dato);
 void memcpySegmento(void *destino, void *origen, size_t offsetOrigen, size_t offsetDestino, size_t largo);
+
+void leerBloqueConOffset(int bloque, int offset, void* datos);
+void escribirBloqueConOffset(int bloque, int offset, void* datos);
+
+void escribirBloque (void*datos);
+void borrarBloque(int bloque);
+
+int buscarBloqueVacio();
+int buscarTablaVacia();
 
 #endif /* SAC_SERVER_H_ */
