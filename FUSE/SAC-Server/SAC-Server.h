@@ -25,10 +25,11 @@
 #include<inttypes.h>
 
 
-int *bloquesDatos;
-int bloquesBitmap;
+int *bloquesDatosFS;
+off_t largoAlmacenamiento;
 int disco;
-void* extrae;
+
+
 
 t_config* leer_config(void);
 void leerHead(void);
@@ -37,6 +38,8 @@ void cargarAlmacenamiento(void);
 void iniciarLog(void);
 void apagarServer(void);
 
-
+void leer(int bloque, int offset, void* dato);
+void escribir(int bloque, int offset, void* dato);
+void memcpySegmento(void *destino, void *origen, size_t offsetOrigen, size_t offsetDestino, size_t largo);
 
 #endif /* SAC_SERVER_H_ */
