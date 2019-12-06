@@ -19,8 +19,6 @@ void leerHead(void){
 	uint32_t* inicioBitmapFS = malloc(sizeof(uint32_t));
 	uint32_t* bloquesBitmapFS = malloc(sizeof(uint32_t));;
 
-	int bloquesTotales;
-
 	leerBloqueConOffset(0,0,nombreFS);
 	Logger_Log(LOG_INFO, "El volumen contiene un FileSystem: %s .", nombreFS);
 	free(nombreFS);
@@ -37,16 +35,16 @@ void leerHead(void){
 	Logger_Log(LOG_INFO, "Cantidad de bloques que ocupa el bitmap: %lu .", bloquesBitmapFS);
 	free(bloquesBitmapFS);
 
-	bloquesTotales = largoAlmacenamiento/ BLOCKSIZE;
+	largoBitmapFS = largoAlmacenamiento/ BLOCKSIZE;
 	//bloquesBitmap = ((bloquesTotales/8)/BLOCKSIZE) + 1;
 
-	bloquesDatosFS = bloquesTotales -1025 - 1 ;//-(int)bloquesBitmapFS;  El 1 ese se puede calcular con bloquesBitmap
-	largoBitmapFS = bloquesTotales - 2;
+	bloquesDatosFS = (int)largoBitmapFS - 1025 -1 ;//-(int)bloquesBitmapFS;  El 1 ese se puede calcular con bloquesBitmap
 
 	Logger_Log(LOG_INFO, "Largo del Bitmap: %d .", largoBitmapFS);
 	Logger_Log(LOG_INFO, "Bloques para datos: %d .", bloquesDatosFS);
 
-	bitArrayFS = malloc(largoBitmapFS); //Cambiar largo de malloc con bloquesDatosFS cuando ande
+	bitArrayFS = bitarray_create(bitArrayFS, (int)largoBitmapFS);
+
 	leerBloqueConOffset(1,0,bitArrayFS);
 
 	}
@@ -71,29 +69,29 @@ void leerBloqueConOffset(int bloque, int offset, void* datos){
 
 int buscarBloqueVacio(){
 	int indice = 1024;
-	while(bitarray_test_bit(bitArrayFS,indice) & indice < largoBitmapFS + 1){
+	while(bitarray_test_bit(bitArrayFS,indice) & indice < largoBitmapFS){
 		indice++;
 	}
-	if(indice == largoBitmapFS+1){
+	if(indice == largoBitmapFS){
 		Logger_Log(LOG_INFO, "Disco lleno, no hay bloques vacios.");
-		return NULL; //Ver salida de este error;
+		return -1; //Ver salida de este error;
 	}else{
 		return indice;
 	}
 }
 
-int buscarTablaVacia(){
-	int indice = 0;
-	while(bitarray_test_bit(bitArrayFS,indice)& indice < 1024){
-		indice++;
+int buscarTablaDisponible(){
+	int i = 0;
+	while( (  (int)( (tablas + i)->state ) !=  0  )  &  ( i < 1024) ){
+		i++;
 	}
-	if(indice == 1024){
-		Logger_Log(LOG_INFO, "No se pueden crear mas archivos.");
-		return NULL; //Ver salida de este error;
+	if(i == 1024){
+		return -1; //Ver salida de este error;
 	}else{
-		return indice;
-
+		return i;
+	}
 }
+
 void escribirBloque(void*datos){
 	int bloqueObjetivo;
 	bloqueObjetivo = buscarBloqueVacio;
@@ -104,7 +102,26 @@ void escribirBloque(void*datos){
 void borrarBloque(int bloque){
 	bitarray_clean_bit(bitArrayFS,bloque);
 }
-void archivoNuevo(char* nombre,void*datos, void*padre){ //VER
+void archivoNuevo(char* nombre,void*datos, void*padre){ //TERMINAR
+	int tablaObjetivo;
+	tablaObjetivo = buscarTablaDisponible();
+	if(tablaObjetivo == -1){
+		Logger_Log(LOG_INFO, "No se pueden crear mas archivos.");
+	}else{
+		int i = 0;
+		int bloquesNecesarios = ceil(sizeof(datos) + 0.0 /BLOCKSIZE);
+		int* bloquesAUsar = malloc(sizeof(int) * bloquesNecesarios);
+		while(  (bloquesAUsar + i) <= 0  &  i < bloquesNecesarios  ){
+			*(bloquesAUsar + i ) = buscarBloqueVacio();
+			i++;
+		}
+		if (bloquesAUsar < 0){
+			Logger_Log(LOG_INFO, "No hay espacio suficiente en el almacenamiento.");
+		}else{
+
+		}
+
+	}
 }
 void borrarArchivo(){ //VER
 
@@ -118,6 +135,16 @@ void memcpySegmento(void *destino, void *origen, size_t offsetOrigen, size_t off
    for(int i = 0; i< largo;i++){
 		cdestino[i+offsetDestino] = corigen[i+offsetOrigen];
 	}
+}
+
+void cargarTablasNodos(){
+	tablas = malloc(1024 * sizeof(GFile));
+	GFile* datos  = malloc(sizeof(GFile));
+	for(int i = 0  ; i < 1024 ; i++){
+		leerBloqueConOffset(i+2,0,datos);
+		memcpy(tablas + i,datos,sizeof(GFile));
+	}
+	free(datos);
 }
 
 void cargarAlmacenamiento(void){
@@ -144,6 +171,8 @@ void cargarAlmacenamiento(void){
 		largoAlmacenamiento = finArchivo - inicioArchivo;
 		lseek(disco, 0, SEEK_SET);
 
+		cargarTablasNodos();
+
 		Logger_Log(LOG_INFO, "Disco %s cargado exitosamente. Contiene %d bytes.", nombreHD, largoAlmacenamiento);
 
 		config_destroy(fuseConfig);
@@ -152,6 +181,7 @@ void cargarAlmacenamiento(void){
 }
 void descargarAlmacenamiento(){
 	free(bitArrayFS);
+	free(tablas);
 	close(disco);
 }
 
@@ -190,6 +220,10 @@ int main(){
 	int bloqueVacio = 0;
 	bloqueVacio = buscarBloqueVacio;
 	printf("Bloque Vacio : %d \n", bloqueVacio);
+
+	int tablaVacia ;
+	tablaVacia = buscarTablaDisponible();
+	printf("Tabla disponible : %d \n", tablaVacia);
 
 	//iniciarServer();
 

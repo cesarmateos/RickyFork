@@ -30,7 +30,9 @@ int *bloquesDatosFS;
 int *largoBitmapFS;
 off_t largoAlmacenamiento;
 int disco;
-t_bitarray* bitArrayFS;
+void* bitArrayFS;
+
+GFile *tablas;
 
 
 t_config* leer_config(void);
@@ -39,6 +41,7 @@ void iniciarServer(void);
 void cargarAlmacenamiento(void);
 void iniciarLog(void);
 void apagarServer(void);
+void cargarTablasNodos();
 
 void memcpySegmento(void *destino, void *origen, size_t offsetOrigen, size_t offsetDestino, size_t largo);
 
@@ -49,6 +52,6 @@ void escribirBloque (void*datos);
 void borrarBloque(int bloque);
 
 int buscarBloqueVacio();
-int buscarTablaVacia();
+int buscarTablaDisponible();
 
 #endif /* SAC_SERVER_H_ */
