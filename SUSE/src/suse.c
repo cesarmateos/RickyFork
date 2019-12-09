@@ -1,111 +1,48 @@
 #include <stdio.h>
 #include <stdlib.h>
-
 #include<commons/log.h>
 #include<commons/string.h>
 #include<commons/bitarray.h>
 #include<commons/config.h>
+#include"kemmens/logger.h"
+#include<commons/collections/list.h>
+#include<commons/temporal.h>
+#include<readline/readline.h>
+#include"kemmens/SocketServer.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <kemmens/SocketServer.h>
-struct nodoPrograma{
-	int id;
-	struct nodoPrograma *ptrsiguiente;
+struct t_programa{
+	int identificador;
+	t_list* hilos;
 };
-
-struct nodoListaPrograma{
-	struct nodoPrograma programa;
-	struct nodoListaPrograma *ptrsiguiente;
+struct t_hilo{
+	int identificador;
+	char* tiempoDeEjecucion;
 };
-typedef struct nodoListaPrograma NodoListaPrograma;
-typedef NodoListaPrograma *ptrNodoListaPrograma;
-typedef struct nodoPrograma NodoPrograma;
-typedef NodoPrograma *ptrNodoPrograma;
-
-void insertar(ptrNodoPrograma *ptrs, int valor){
-	ptrNodoPrograma ptrNuevo;
-	ptrNodoPrograma ptrAnterior;
-	ptrNodoPrograma ptrActual;
-	ptrNuevo = malloc(sizeof(NodoPrograma));
-	if(ptrNuevo != NULL){
-		ptrNuevo->id = valor;
-		ptrNuevo->ptrsiguiente = NULL;
-	ptrAnterior = NULL;
-	ptrActual = ptrs;
-	while(ptrActual != NULL && valor > ptrActual->id){
-		ptrAnterior = ptrActual;
-		ptrActual= ptrActual->ptrsiguiente;
-	}
-	if(ptrAnterior == NULL){
-		ptrNuevo->ptrsiguiente = *ptrs;
-		*ptrs = ptrNuevo;
-	}
-	else{
-		ptrAnterior->ptrsiguiente = ptrNuevo;
-		ptrNuevo->ptrsiguiente = ptrActual;
-	}
-
-	}
-	else{
-		printf("la memoria esta llena");
-	}
+typedef struct t_programa T_programa;
+typedef struct t_hilo T_hilo;
+t_list* listaPrograma = list_create();
+t_list* blockeados = list_create();
+void iniciarServidor(){
+	SocketServer_Start("SUSE",3801);
+	SocketServer_ActionsListeners evento;
+	SocketServer_ListenForConnection(evento);
 }
-
-void eliminar(ptrNodoPrograma *ptrs,int hiloASacar){
-	ptrNodoPrograma ptrtemp;
-	ptrNodoPrograma ptrAnterior;
-	ptrNodoPrograma ptrActual;
-	if(hiloASacar == (*ptrs)->id){
-		ptrtemp = *ptrs;
-		*ptrs = (*ptrs)->ptrsiguiente;
-		free(ptrtemp);
-	}
-	else{
-		ptrAnterior= *ptrs;
-		ptrActual = (*ptrs)->ptrsiguiente;
-		while(ptrActual != NULL && ptrActual->id != hiloASacar){
-			ptrAnterior = ptrActual;
-			ptrActual= ptrActual->ptrsiguiente;
-		}
-		if(ptrActual != NULL){
-			ptrtemp = *ptrActual;
-			ptrAnterior->ptrsiguiente = ptrActual->ptrsiguiente;
-			free(ptrtemp);
-		}
-	}
+void iniciarLog(void){
+	Logger_CreateLog("SUSE.log","SUSE",true);
 }
-void insertarPrograma(ptrNodoListaPrograma ptrs,NodoPrograma valor){
-	ptrNodoListaPrograma ptrNuevo;
-	ptrNodoListaPrograma ptrAnterior;
-	ptrNodoListaPrograma ptrActual;
-	ptrNuevo = malloc(sizeof(NodoPrograma));
-	if(ptrNuevo != NULL){
-		ptrNuevo->programa = valor;
-		ptrNuevo->ptrsiguiente = NULL;
-		ptrAnterior = NULL;
-		ptrActual = ptrs;
-		while(ptrActual != NULL){
-			ptrAnterior = ptrActual;
-			ptrActual= ptrActual->ptrsiguiente;
-		}
-		if(ptrAnterior == NULL){
-			ptrNuevo->ptrsiguiente = *ptrs;
-			*ptrs = ptrNuevo;
-		}
-		else{
-			ptrAnterior->ptrsiguiente = ptrNuevo;
-			ptrNuevo->ptrsiguiente = ptrActual;
-		}
-
-		}
-		else{
-			printf("la memoria esta llena");
-		}
+T_programa crearPrograma(int identificador){
+	T_programa programa;
+	programa.identificador = identificador;
+	programa.hilos = list_create();
+	list_add(listaPrograma,programa);
+	return programa;
 }
-int main(void) {
-
-	SocketServer_Start("suse",4000);
+T_hilo crearHilo(int identificador){
+	T_hilo hilo;
+	hilo.identificador = identificador;
+	hilo.tiempoDeEjecucion = temporal_get_string_time();
+}
+int main() {
 
 	return EXIT_SUCCESS;
 }
