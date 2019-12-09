@@ -50,7 +50,7 @@ void cargarBitArray(){
 void cargarTablasNodos(void){
 	tablas = malloc(1024 * sizeof(GFile));
 	GFile* datos  = malloc(sizeof(GFile));
-	for(int i = 0  ; i < 1024 ; i++){
+	for(int i = 0  ; i < GFILEBYTABLE ; i++){
 		leerBloque(  (i + 1 + (*bloquesBitmapFS) ),datos); //cuando ande bloquesBitmapFS, usarlo
 		memcpy(tablas + i,datos,sizeof(GFile));
 	}
@@ -89,10 +89,12 @@ void cargarAlmacenamiento(void){
 
 }
 void descargarAlmacenamiento(){
+	conteos();
 	bitarray_destroy(bitArrayFS);
 	free(tablas);
 	free(bloquesBitmapFS);
 	close(disco);
+	Logger_Log(LOG_INFO, "Se ha descargado el Almacenamiento");
 }
 
 
@@ -106,12 +108,7 @@ void leerHead(void){
 	char* nombreFS = malloc(3*sizeof(char));
 	uint32_t* versionFS = malloc(sizeof(uint32_t));
 	uint32_t* inicioBitmapFS = malloc(sizeof(uint32_t));
-	bloquesBitmapFS = malloc(sizeof(uint32_t));;
-
-	int bloquesDisponibles = 0;
-	int primerBloqueDisponible = 0;
-	int primerTablaVacia = 0;
-	int tablasDisponibles = 0;
+	bloquesBitmapFS = malloc(sizeof(uint32_t));
 
 	leerBloque(0,temporario);
 
@@ -139,18 +136,7 @@ void leerHead(void){
 	cargarBitArray();
 	cargarTablasNodos();
 
-	bloquesDisponibles = bloquesLibres();
-	Logger_Log(LOG_INFO, "Bloques disponibles: %d .", bloquesDisponibles);
-
-	primerBloqueDisponible = buscarBloqueDisponible();
-	Logger_Log(LOG_INFO, "Primer bloque disponible : %d .", primerBloqueDisponible);
-
-	tablasDisponibles = tablasLibres();
-	Logger_Log(LOG_INFO, "Tablas disponibles: %d .", tablasLibres);
-
-	primerTablaVacia = buscarTablaDisponible();
-	Logger_Log(LOG_INFO, "Primer tabla disponible : %d", primerTablaVacia);
-
+	conteos();
 
 	free(temporario);
 	}
@@ -194,10 +180,10 @@ int buscarBloqueDisponible(void){
 
 int buscarTablaDisponible(void){
 	int i = 0;
-	while( (  (int)( (tablas + i)->state )   )  &  ( i < 1024) ){
+	while( (  (int)( (tablas + i)->state )   )  &  ( i < GFILEBYTABLE) ){
 		i++;
 	}
-	if(i == 1024){
+	if(i == GFILEBYTABLE){
 		return -1; //Ver salida de este error;
 	}else{
 		return i;
@@ -214,8 +200,8 @@ int bloquesLibres(void){
 
 int tablasLibres(void){
 	int contador = 0;
-	for(int i = 0 ; i < 1024 ; i++){
-		if((int)(tablas + i)->state==  0){
+	for(int i = 0 ; i < GFILEBYTABLE ; i++){
+		if((int)(tablas + i)->state == 0){
 			contador++;
 		}
 	}
@@ -243,26 +229,25 @@ void archivoNuevo(char* nombre,void*datos, void*padre){ //TERMINAR
 	}else{
 
 		int bloquesNecesariosDatos = ceil(sizeof(datos) + 0.0 /BLOCKSIZE);
-		/*int bloquesNecesariosDirecciones = ceil((double) bloquesNecesariosDatos /(double)1024.0 );
+		int bloquesNecesariosDirecciones = ceil( bloquesNecesariosDatos / 1024.0 );
 		int bloquesNecesariosTotales = bloquesNecesariosDatos + bloquesNecesariosDirecciones;
 		int bloquesDisponibles = bloquesLibres();
 
 			if(bloquesNecesariosTotales <= bloquesDisponibles){
-				crearArrayPunteros(tablas,bloquesNecesariosDirecciones);
+				crearArrayPunteros(tablas,bloquesNecesariosDirecciones);//TERMINAR
 
 
 			}else{
 				Logger_Log(LOG_ERROR, "No hay espacio suficiente en el almacenamiento para guardar el archivo.");
 			}
-*/
 	}
 }
 void borrarArchivo(void){ //SIN EMPEZAR
 
 }
 
-void memcpySegmento(void *destino, void *origen, size_t offsetOrigen, size_t offsetDestino, size_t largo)
-{
+void memcpySegmento(void *destino, void *origen, size_t offsetOrigen, size_t offsetDestino, size_t largo){
+
    char *corigen = (char *)origen;
    char *cdestino = (char *)destino;
 
@@ -271,6 +256,34 @@ void memcpySegmento(void *destino, void *origen, size_t offsetOrigen, size_t off
 	}
 }
 
+void conteos(){
+
+	int bloquesUso = 0;
+	int bloquesDisponibles = 0;
+	int primerBloqueDisponible = 0;
+	int tablasUso = 0;
+	int primerTablaVacia = 0;
+	int tablasDisponibles = 0;
+
+	bloquesDisponibles = bloquesLibres();
+	Logger_Log(LOG_INFO, "Bloques disponibles: %d .", bloquesDisponibles);
+
+	bloquesUso = (int)bloquesDatosFS - bloquesDisponibles;
+	Logger_Log(LOG_INFO, "Bloques en uso: %d .", bloquesUso);
+
+	primerBloqueDisponible = buscarBloqueDisponible();
+	Logger_Log(LOG_INFO, "Primer bloque disponible : %d .", primerBloqueDisponible);
+
+	tablasDisponibles = tablasLibres();
+	Logger_Log(LOG_INFO, "Tablas disponibles: %d .", tablasDisponibles);
+
+	tablasUso = GFILEBYTABLE - tablasDisponibles;
+	Logger_Log(LOG_INFO, "Tablas en uso: %d .", tablasUso);
+
+	primerTablaVacia = buscarTablaDisponible();
+	Logger_Log(LOG_INFO, "Primer tabla disponible : %d", primerTablaVacia);
+
+}
 
 
 int main(){
@@ -280,7 +293,6 @@ int main(){
 	cargarAlmacenamiento();
 
 	leerHead();
-
 
 	//iniciarServer();
 
