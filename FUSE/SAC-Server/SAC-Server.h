@@ -18,6 +18,7 @@
 #include<commons/bitarray.h>
 #include<readline/readline.h>
 #include<time.h>
+#include<math.h>
 #include "SAC-Estructuras.h"
 #include"kemmens/SocketServer.h"
 #include<fuse.h>
@@ -27,31 +28,39 @@
 
 
 int *bloquesDatosFS;
-int *largoBitmapFS;
+int largoBitmapFS;
+uint32_t *bloquesBitmapFS;
 off_t largoAlmacenamiento;
 int disco;
-void* bitArrayFS;
+char* bitArrayFS;
 
 GFile *tablas;
 
 
 t_config* leer_config(void);
-void leerHead(void);
-void iniciarServer(void);
-void cargarAlmacenamiento(void);
+
 void iniciarLog(void);
+void iniciarServer(void);
 void apagarServer(void);
-void cargarTablasNodos();
 
-void memcpySegmento(void *destino, void *origen, size_t offsetOrigen, size_t offsetDestino, size_t largo);
+void leerHead(void);
 
-void leerBloqueConOffset(int bloque, int offset, void* datos);
-void escribirBloqueConOffset(int bloque, int offset, void* datos);
+void cargarAlmacenamiento(void);
+void cargarBitArray();
+void cargarTablasNodos(void);
 
-void escribirBloque (void*datos);
+void descargarAlmacenamiento();
+
+void leerBloque(int bloque, void* datos);
+void escribirBloque(int bloqueObjetivo, void*datos);
+
 void borrarBloque(int bloque);
 
-int buscarBloqueVacio();
-int buscarTablaDisponible();
+int bloquesLibres(void);
+
+int buscarBloqueDisponible();
+int buscarTablaDisponible(void);
+
+void archivoNuevo(char* nombre,void*datos, void*padre);
 
 #endif /* SAC_SERVER_H_ */
