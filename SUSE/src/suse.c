@@ -10,16 +10,19 @@
 #include<readline/readline.h>
 #include"kemmens/SocketServer.h"
 
-struct t_programa{
-	int identificador;
-	t_list* hilos;
-};
+
 struct t_hilo{
 	int identificador;
 	char* tiempoDeEjecucion;
 };
-typedef struct t_programa T_programa;
 typedef struct t_hilo T_hilo;
+
+struct t_programa{
+	int identificador;
+	t_list* ready;
+	T_hilo* exec;
+};
+typedef struct t_programa T_programa;
 
 void iniciarServidor(){
 	SocketServer_Start("SUSE",3801);
@@ -32,7 +35,7 @@ void iniciarLog(void){
 T_programa* crearPrograma(int identificador){
 	T_programa* programa;
 	programa->identificador = identificador;
-	programa->hilos = list_create();
+	programa->ready = list_create();
 	return programa;
 }
 T_hilo crearHilo(int identificador){
