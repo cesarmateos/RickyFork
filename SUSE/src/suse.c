@@ -20,8 +20,7 @@ struct t_hilo{
 };
 typedef struct t_programa T_programa;
 typedef struct t_hilo T_hilo;
-t_list* listaPrograma = list_create();
-t_list* blockeados = list_create();
+
 void iniciarServidor(){
 	SocketServer_Start("SUSE",3801);
 	SocketServer_ActionsListeners evento;
@@ -30,11 +29,10 @@ void iniciarServidor(){
 void iniciarLog(void){
 	Logger_CreateLog("SUSE.log","SUSE",true);
 }
-T_programa crearPrograma(int identificador){
-	T_programa programa;
-	programa.identificador = identificador;
-	programa.hilos = list_create();
-	list_add(listaPrograma,programa);
+T_programa* crearPrograma(int identificador){
+	T_programa* programa;
+	programa->identificador = identificador;
+	programa->hilos = list_create();
 	return programa;
 }
 T_hilo crearHilo(int identificador){
@@ -43,6 +41,9 @@ T_hilo crearHilo(int identificador){
 	hilo.tiempoDeEjecucion = temporal_get_string_time();
 }
 int main() {
-
+	t_list* listaPrograma = list_create();
+	T_programa* programa1 = crearPrograma(1);
+	list_add(listaPrograma,programa1);
+	t_list* blockeados = list_create();
 	return EXIT_SUCCESS;
 }
