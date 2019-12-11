@@ -212,7 +212,7 @@ void crearPunterosIndirectos(GFile *tabla, int cantidad){ //TERMINAR
 GFile* devolverTabla(int numeroTabla){
 	return (mapTablas + numeroTabla);
 }
-void archivoNuevo(unsigned char* nombre, void*datos, uint32_t tamanio, uint32_t padre){ //TERMINAR
+void archivoNuevo(unsigned char* nombre, void*datos, uint32_t tamanio, uint32_t padre){
 	int numeroTablaAUsar = 0;
 	GFile* tabla; // = malloc(sizeof(GFile));
 	ptrGBloque* arrayPunterosIndirectos;
@@ -291,12 +291,55 @@ void archivoNuevo(unsigned char* nombre, void*datos, uint32_t tamanio, uint32_t 
 	sincronizarBitArray();
 	//free(tabla);
 }
-void* leerArchivo(){
+void crearDirectorio(unsigned char* nombre, uint32_t padre){
+	int numeroTablaAUsar = 0;
+	GFile* tabla; // = malloc(sizeof(GFile));
+
+	numeroTablaAUsar = buscarTablaDisponible();
+
+	if(numeroTablaAUsar == -1){
+		Logger_Log(LOG_ERROR, "No se pueden crear mas directorios.");
+	}else{
+		time_t fechaActual;
+		fechaActual = time(NULL);
+		tabla = devolverTabla(numeroTablaAUsar);
+
+		tabla->state = 2;
+		memcpy(tabla->fname,nombre,GFILENAMELENGTH);
+		tabla->parent_dir_block = padre;
+		tabla->c_date = fechaActual;
+		tabla->m_date = fechaActual;
+	}
+	sincronizarTabla();
+}
+
+void* leerArchivo(unsigned char* path){
 	void* datos;
+
 	return datos;
 }
 void borrarArchivo(void){ //SIN EMPEZAR
 
+}
+
+int* encontrarPadres(unsigned char* nombre){
+	int* padresProbables;
+	int aciertos = 0;
+	for(int i = 0; i < GFILEBYTABLE ; i++){
+		if((mapTablas + i)->fname == nombre){
+			*(padresProbables + aciertos) = i;
+			aciertos++;
+		}
+	}
+	if(aciertos == 0){
+		*padresProbables = -1;
+	}
+	return padresProbables;
+}
+
+int localizarTablaArchivo(unsigned char* nombre){
+	int bloqueObjetivo;
+	return bloqueObjetivo;
 }
 
 void memcpySegmento(void *destino, void *origen, size_t offsetOrigen, size_t offsetDestino, size_t largo){
