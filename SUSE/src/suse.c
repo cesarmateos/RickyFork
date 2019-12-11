@@ -10,7 +10,7 @@
 #include<readline/readline.h>
 #include"kemmens/SocketServer.h"
 
-
+static int gradoDeMutiprogramacion;
 struct t_hilo{
 	int identificador;
 	char* tiempoDeEjecucion;
@@ -32,16 +32,33 @@ void iniciarServidor(){
 void iniciarLog(void){
 	Logger_CreateLog("SUSE.log","SUSE",true);
 }
+
 T_programa* crearPrograma(int identificador){
 	T_programa* programa;
 	programa->identificador = identificador;
 	programa->ready = list_create();
 	return programa;
 }
-T_hilo crearHilo(int identificador){
-	T_hilo hilo;
-	hilo.identificador = identificador;
-	hilo.tiempoDeEjecucion = temporal_get_string_time();
+
+void ejecutarHilo(T_programa* programa,T_hilo* hiloAejecutar){
+	programa->exec = hiloAejecutar;
+}
+
+T_hilo* crearHilo(int identificador){
+	T_hilo* hilo;
+	hilo->identificador = identificador;
+	hilo->tiempoDeEjecucion = temporal_get_string_time();
+	return hilo;
+}
+
+void CargarPrograma(T_programa* programa,t_list* lista){
+	if(list_size(lista) < gradoDeMutiprogramacion)
+		list_add(lista,programa);
+}
+void bloquearHilo(T_programa* programa,t_list* blockeado){
+	T_hilo* hiloBloqueado = programa->exec;
+	programa->exec = NULL;
+	list_add(blockeado,hiloBloqueado);
 }
 int main() {
 	t_list* listaPrograma = list_create();
