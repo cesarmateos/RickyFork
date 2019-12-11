@@ -33,10 +33,10 @@ void iniciarLog(void){
 	Logger_CreateLog("SUSE.log","SUSE",true);
 }
 
-T_programa* crearPrograma(int identificador){
-	T_programa* programa;
-	programa->identificador = identificador;
-	programa->ready = list_create();
+T_programa crearPrograma(int identificador){
+	T_programa programa;
+	programa.identificador = identificador;
+	programa.ready = list_create();
 	return programa;
 }
 
@@ -44,11 +44,15 @@ void ejecutarHilo(T_programa* programa,T_hilo* hiloAejecutar){
 	programa->exec = hiloAejecutar;
 }
 
-T_hilo* crearHilo(int identificador){
-	T_hilo* hilo;
-	hilo->identificador = identificador;
-	hilo->tiempoDeEjecucion = temporal_get_string_time();
+T_hilo crearHilo(int identificador){
+	T_hilo hilo;
+	hilo.identificador = identificador;
+	hilo.tiempoDeEjecucion = temporal_get_string_time();
 	return hilo;
+}
+
+T_hilo* proximoHiloAejecutar(T_programa programa){
+	return list_get(programa.ready,0);
 }
 
 void CargarPrograma(T_programa* programa,t_list* lista){
@@ -62,8 +66,8 @@ void bloquearHilo(T_programa* programa,t_list* blockeado){
 }
 int main() {
 	t_list* listaPrograma = list_create();
-	T_programa* programa1 = crearPrograma(1);
-	list_add(listaPrograma,programa1);
+	T_programa programa1 = crearPrograma(1);
+	list_add(listaPrograma,&programa1);
 	t_list* blockeados = list_create();
 	return EXIT_SUCCESS;
 }
