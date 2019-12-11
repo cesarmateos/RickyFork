@@ -33,28 +33,15 @@ void apagarServer(void){
 	SocketServer_TerminateAllConnections();
 }
 
-void cargarBitArray(){
-
-	char* bitArrayTemp = malloc(largoBitmapFS);
-	leerBloque(1,bitArrayTemp);
-
-	for(int i = 0 ; i < (*bloquesBitmapFS) ;i++){
-
-	leerBloque((i+1),bitArrayTemp+i);
-
-	}
-
-	bitArrayFS = bitarray_create(bitArrayTemp, largoBitmapFS );
+void mapearTablas(void){
+	mapTablas = calloc(GFILEBYTABLE, sizeof(GFile));
+	mapTablas = (void*) mmap(NULL,(GFILEBYTABLE * sizeof(GFile)) ,PROT_READ|PROT_WRITE,MAP_SHARED,disco, (inicioTablas *BLOCKSIZE) );
 }
-
-void cargarTablasNodos(void){
-	tablas = malloc(1024 * sizeof(GFile));
-	GFile* datos  = malloc(sizeof(GFile));
-	for(int i = 0  ; i < GFILEBYTABLE ; i++){
-		leerBloque(  (i + 1 + (*bloquesBitmapFS) ),datos); //cuando ande bloquesBitmapFS, usarlo
-		memcpy(tablas + i,datos,sizeof(GFile));
-	}
-	free(datos);
+void mapearBitmap(void){
+	char* bitArrayTemp = calloc(largoBitmap,sizeof(char));
+	mapBitmap = calloc(largoBitmap,sizeof(char));
+	bitArrayTemp = (char*) mmap(NULL,largoBitmap,PROT_READ|PROT_WRITE,MAP_SHARED,disco, ((*inicioBitmap) * BLOCKSIZE) );
+	mapBitmap = bitarray_create(bitArrayTemp, largoBitmap );
 }
 
 
@@ -90,9 +77,11 @@ void cargarAlmacenamiento(void){
 }
 void descargarAlmacenamiento(){
 	conteos();
-	bitarray_destroy(bitArrayFS);
-	free(tablas);
-	free(bloquesBitmapFS);
+	free(bloquesBitmap);
+	free(inicioBitmap);
+	munmap(mapBitmap, largoBitmap);
+	munmap(mapTablas,sizeof(GFile) * GFILEBYTABLE);
+	bitarray_destroy(mapBitmap);
 	close(disco);
 	Logger_Log(LOG_INFO, "Se ha descargado el Almacenamiento");
 }
@@ -107,8 +96,8 @@ void leerHead(void){
 	void* temporario = malloc(BLOCKSIZE);
 	char* nombreFS = malloc(3*sizeof(char));
 	uint32_t* versionFS = malloc(sizeof(uint32_t));
-	uint32_t* inicioBitmapFS = malloc(sizeof(uint32_t));
-	bloquesBitmapFS = malloc(sizeof(uint32_t));
+	inicioBitmap = malloc(sizeof(uint32_t));
+	bloquesBitmap = malloc(sizeof(uint32_t));
 
 	leerBloque(0,temporario);
 
@@ -116,25 +105,27 @@ void leerHead(void){
 	Logger_Log(LOG_INFO, "El volumen contiene un FileSystem: %s .", nombreFS);
 	free(nombreFS);
 
-	memcpy(versionFS,temporario+4,sizeof(versionFS));
+	memcpy(versionFS,temporario+4,sizeof(uint32_t));
 	Logger_Log(LOG_INFO, "Version: %lu .", *versionFS);
 	free(versionFS);
 
-	memcpy(inicioBitmapFS,temporario+8,sizeof(inicioBitmapFS));
-	Logger_Log(LOG_INFO, "Bitmap inicia en: %lu .", *inicioBitmapFS);
-	free(inicioBitmapFS);
+	memcpy(inicioBitmap,temporario+8,sizeof(uint32_t));
+	Logger_Log(LOG_INFO, "Bitmap inicia en el bloque: %lu .", *inicioBitmap);
 
-	memcpy(bloquesBitmapFS,temporario+12,sizeof(bloquesBitmapFS));
-	Logger_Log(LOG_INFO, "Cantidad de bloques que ocupa el bitmap: %lu .", *bloquesBitmapFS);
+	largoBitmap = largoAlmacenamiento/ BLOCKSIZE;
+	Logger_Log(LOG_INFO, "Largo del Bitmap en bits: %lu .", largoBitmap);
 
-	largoBitmapFS = largoAlmacenamiento/ BLOCKSIZE;
-	Logger_Log(LOG_INFO, "Largo del Bitmap: %d .", largoBitmapFS);
+	memcpy(bloquesBitmap,temporario+12,sizeof(uint32_t));
+	Logger_Log(LOG_INFO, "Cantidad de bloques que ocupa el bitmap: %lu .", *bloquesBitmap);
 
-	bloquesDatosFS = largoBitmapFS - 1025 - (*bloquesBitmapFS);
-	Logger_Log(LOG_INFO, "Bloques para datos: %d .", bloquesDatosFS);
+	inicioTablas = 1 + (*bloquesBitmap);
+	Logger_Log(LOG_INFO, "Las tablas de Nodos inician en el bloque: %lu .", inicioTablas);
 
-	cargarBitArray();
-	cargarTablasNodos();
+	bloquesDatos = largoBitmap - 1025 - (*bloquesBitmap);
+	Logger_Log(LOG_INFO, "Bloques para datos totales: %lu.", bloquesDatos);
+
+	mapearTablas();
+	mapearBitmap();
 
 	conteos();
 
@@ -142,32 +133,31 @@ void leerHead(void){
 	}
 }
 
-void leerBloque(int bloque, void* datos){
+void leerBloque(uint32_t bloque, void* datos){
 	void *extrae = malloc(BLOCKSIZE);
 	extrae = (void*) mmap(NULL,BLOCKSIZE,PROT_READ|PROT_WRITE,MAP_SHARED,disco,bloque*BLOCKSIZE);
 	memcpy(datos,extrae,BLOCKSIZE);
 	munmap(extrae,BLOCKSIZE);
 }
-/*
-void escribirBloqueConOffset(int bloque, int offset, void* datos){
-	char *extrae = malloc(BLOCKSIZE);
-	int largo = sizeof(uint32_t);
-	extrae = (void*) mmap(NULL,BLOCKSIZE,PROT_READ|PROT_WRITE,MAP_SHARED,disco,0);
-	memcpySegmento(extrae, datos,,0,offset,largo);
+
+void escribirBloque(uint32_t bloque, void* datos){
+	void *extrae = malloc(BLOCKSIZE);
+	extrae = (void*) mmap(NULL,BLOCKSIZE,PROT_READ|PROT_WRITE,MAP_SHARED,disco,bloque*BLOCKSIZE);
+	memcpy(extrae, datos, BLOCKSIZE);
 	msync(extrae,BLOCKSIZE,MS_SYNC);
 	munmap(extrae,BLOCKSIZE);
 }
-*/
 
-void borrarBloque(int bloque){
-	bitarray_clean_bit(bitArrayFS,bloque);
+
+void borrarBloque(uint32_t bloque){
+	bitarray_clean_bit(mapBitmap,bloque);
 }
 
 
-int buscarBloqueDisponible(void){
-	int indice = 0;
-	int largoBitmap = bitarray_get_max_bit(bitArrayFS);
-	while(bitarray_test_bit(bitArrayFS,indice) & ( indice < largoBitmap ) ){
+uint32_t buscarBloqueDisponible(void){
+	uint32_t indice = 0;
+	uint32_t largoBitmap = bitarray_get_max_bit(mapBitmap);
+	while(bitarray_test_bit(mapBitmap,indice) & ( indice < largoBitmap ) ){
 		indice++;
 	}
 	if(indice == largoBitmap){
@@ -180,7 +170,7 @@ int buscarBloqueDisponible(void){
 
 int buscarTablaDisponible(void){
 	int i = 0;
-	while( (  (int)( (tablas + i)->state )   )  &  ( i < GFILEBYTABLE) ){
+	while( (  (int)( (mapTablas + i)->state )   )  &  ( i < GFILEBYTABLE) ){
 		i++;
 	}
 	if(i == GFILEBYTABLE){
@@ -190,57 +180,120 @@ int buscarTablaDisponible(void){
 	}
 }
 
-int bloquesLibres(void){
-	int contador = 0;
-	for(int i = 0 ; i < largoBitmapFS ; i++){
-		contador += bitarray_test_bit(bitArrayFS,i);
+uint32_t contadorBloquesLibres(void){
+	uint32_t contador = 0;
+	for(uint32_t i = 0 ; i < largoBitmap ; i++){
+		contador += bitarray_test_bit(mapBitmap,i);
 	}
-	return largoBitmapFS - contador;
+	return largoBitmap - contador;
 }
 
-int tablasLibres(void){
+int contadorTablasLibres(void){
 	int contador = 0;
 	for(int i = 0 ; i < GFILEBYTABLE ; i++){
-		if((int)(tablas + i)->state == 0){
+		if((int)(mapTablas + i)->state == 0){
 			contador++;
 		}
 	}
 	return contador;
 }
 
-void* crearArrayPunteros(GFile *tabla, int cantidad){ //TERMINAR
-	void* arrayPunterosABloque = malloc(sizeof(ptrGBloque) *BLKINDIRECT);
-	int bloqueVacio = 0;
+void crearPunterosIndirectos(GFile *tabla, int cantidad){ //TERMINAR
+	ptrGBloque* arrayPunterosIndirectos = malloc(sizeof(ptrGBloque) *BLKINDIRECT);
+	uint32_t bloqueVacio = 0;
 	for(int i = 0; i < cantidad ; i++){
-		bloqueVacio = buscarBloqueDisponible();
-		//(arrayPunterosABloque + i) = bloqueVacio;
-		bitarray_set_bit(bitArrayFS,bloqueVacio);
+		bloqueVacio = buscarBloqueDisponible();  //Busco bloque Disponible.
+		*(arrayPunterosIndirectos + i) = bloqueVacio; //Copio el numero de bloque disponible en el array.
+		bitarray_set_bit(mapBitmap,bloqueVacio); //Reservo el bloque.
 	}
-	return arrayPunterosABloque;
+	memcpy(tabla->blk_indirect,arrayPunterosIndirectos,cantidad);
 }
-void archivoNuevo(char* nombre,void*datos, void*padre){ //TERMINAR
-	int tablaObjetivo = 0;
-	int bloqueVacio = 0;
 
-	tablaObjetivo = buscarTablaDisponible();
+GFile* devolverTabla(int numeroTabla){
+	return (mapTablas + numeroTabla);
+}
+void archivoNuevo(unsigned char* nombre, void*datos, uint32_t tamanio, uint32_t padre){ //TERMINAR
+	int numeroTablaAUsar = 0;
+	GFile* tabla; // = malloc(sizeof(GFile));
+	ptrGBloque* arrayPunterosIndirectos;
 
-	if(tablaObjetivo == -1){
+	numeroTablaAUsar = buscarTablaDisponible();
+
+	if(numeroTablaAUsar == -1){
 		Logger_Log(LOG_ERROR, "No se pueden crear mas archivos.");
 	}else{
 
-		int bloquesNecesariosDatos = ceil(sizeof(datos) + 0.0 /BLOCKSIZE);
-		int bloquesNecesariosDirecciones = ceil( bloquesNecesariosDatos / 1024.0 );
-		int bloquesNecesariosTotales = bloquesNecesariosDatos + bloquesNecesariosDirecciones;
-		int bloquesDisponibles = bloquesLibres();
+		int bloquesNecesariosDatos = ceil( (tamanio + 0.0 ) /BLOCKSIZE);
+		int bloquesNecesariosIndirectos = ceil( bloquesNecesariosDatos / 1024.0 );
+		int bloquesNecesariosTotales = bloquesNecesariosDatos + bloquesNecesariosIndirectos;
+		int bloquesDisponibles = contadorBloquesLibres();
+
+		time_t fechaActual;
+		fechaActual = time(NULL);
 
 			if(bloquesNecesariosTotales <= bloquesDisponibles){
-				crearArrayPunteros(tablas,bloquesNecesariosDirecciones);//TERMINAR
+				tabla = devolverTabla(numeroTablaAUsar);
+				crearPunterosIndirectos(tabla,bloquesNecesariosIndirectos);
+				tabla->state = 1;
 
+				/*
+				memcpy(tabla->fname,nombre,GFILENAMELENGTH);
+				memcpy(tabla->parent_dir_block, padre, sizeof(uint32_t) );
+				memcpy(tabla->file_size, tamanio, sizeof(uint32_t) );
+				memcpy(tabla->c_date, fechaActual, sizeof(uint64_t) );
+				memcpy(tabla->m_date, fechaActual, sizeof(uint64_t) );
+				 */
+
+				memcpy(tabla->fname,nombre,GFILENAMELENGTH);
+				tabla->parent_dir_block = padre;
+				tabla->file_size = tamanio;
+				tabla->c_date = fechaActual;
+				tabla->m_date = fechaActual;
+
+				ptrGBloque bloqueIndirecto = 0;
+				uint32_t bloqueParaDatos = 0;
+				uint32_t bloquesAcumulados = 0;
+				void* segmentoDatos = malloc(BLOCKSIZE);
+
+				arrayPunterosIndirectos = tabla->blk_indirect;
+
+				int tope = 0;
+
+				for(int i = 0; i < bloquesNecesariosIndirectos; i++){
+
+					bloqueIndirecto = *(arrayPunterosIndirectos + i);  // Busco bloque con punteros a bloques
+
+					if(i == bloquesNecesariosIndirectos - 1){
+						tope = bloquesNecesariosDatos - ((bloquesNecesariosIndirectos - 1)*1024);
+					}else{
+						tope = 1024;
+					}
+					ptrGBloque* arrayPunterosABloques = malloc(sizeof(ptrGBloque)*tope); // Creo array con punteros a bloques
+
+					for(int j =  0; j < tope ;j++){
+						bloqueParaDatos = buscarBloqueDisponible();  // Busco bloque disponible
+						*(arrayPunterosABloques + j) = bloqueParaDatos;  // Guardo en en array de punteros a bloques el numero de bloque a apuntar
+						bitarray_set_bit(mapBitmap,bloqueParaDatos);  // Reservo el bloque en el bitmap
+						bloquesAcumulados = (i * 1024) + j ;  // bloques ya guardados
+						memcpy(segmentoDatos,(datos + (bloquesAcumulados* BLOCKSIZE)),BLOCKSIZE);
+						escribirBloque(bloqueParaDatos,segmentoDatos); //Guardo Segmento en el bloque
+					}
+					free(arrayPunterosABloques);
+				}
+				free(segmentoDatos);
 
 			}else{
 				Logger_Log(LOG_ERROR, "No hay espacio suficiente en el almacenamiento para guardar el archivo.");
 			}
+
 	}
+	sincronizarTabla();
+	sincronizarBitArray();
+	//free(tabla);
+}
+void* leerArchivo(){
+	void* datos;
+	return datos;
 }
 void borrarArchivo(void){ //SIN EMPEZAR
 
@@ -258,23 +311,23 @@ void memcpySegmento(void *destino, void *origen, size_t offsetOrigen, size_t off
 
 void conteos(){
 
-	int bloquesUso = 0;
-	int bloquesDisponibles = 0;
-	int primerBloqueDisponible = 0;
+	uint32_t bloquesUso = 0;
+	uint32_t bloquesDisponibles = 0;
+	uint32_t primerBloqueDisponible = 0;
 	int tablasUso = 0;
 	int primerTablaVacia = 0;
 	int tablasDisponibles = 0;
 
-	bloquesDisponibles = bloquesLibres();
-	Logger_Log(LOG_INFO, "Bloques disponibles: %d .", bloquesDisponibles);
+	bloquesDisponibles = contadorBloquesLibres();
+	Logger_Log(LOG_INFO, "Bloques para datos disponibles: %lu .", bloquesDisponibles);
 
-	bloquesUso = (int)bloquesDatosFS - bloquesDisponibles;
-	Logger_Log(LOG_INFO, "Bloques en uso: %d .", bloquesUso);
+	bloquesUso = (int)bloquesDatos - bloquesDisponibles;
+	Logger_Log(LOG_INFO, "Bloques para datos en uso: %lu .", bloquesUso);
 
 	primerBloqueDisponible = buscarBloqueDisponible();
-	Logger_Log(LOG_INFO, "Primer bloque disponible : %d .", primerBloqueDisponible);
+	Logger_Log(LOG_INFO, "Primer bloque disponible : %lu .", primerBloqueDisponible);
 
-	tablasDisponibles = tablasLibres();
+	tablasDisponibles = contadorTablasLibres();
 	Logger_Log(LOG_INFO, "Tablas disponibles: %d .", tablasDisponibles);
 
 	tablasUso = GFILEBYTABLE - tablasDisponibles;
@@ -285,6 +338,13 @@ void conteos(){
 
 }
 
+void sincronizarBitArray(void){
+	msync(mapBitmap,largoBitmap,MS_SYNC);
+}
+
+void sincronizarTabla(void){
+	msync(mapTablas,(GFILEBYTABLE * sizeof(GFile)),MS_SYNC);
+}
 
 int main(){
 
@@ -293,6 +353,12 @@ int main(){
 	cargarAlmacenamiento();
 
 	leerHead();
+
+	char prueba[] = "ESTA ES UNA PRUEBA PARA VER SI ANDA EL NUEVO ARCHIVO";
+
+	int largoPrueba = strlen(prueba);
+
+	//archivoNuevo("Prueba.txt",prueba,largoPrueba,0);
 
 	//iniciarServer();
 

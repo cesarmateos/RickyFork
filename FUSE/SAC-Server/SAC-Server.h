@@ -27,40 +27,50 @@
 #include<inttypes.h>
 
 
-int *bloquesDatosFS;
-int largoBitmapFS;
-uint32_t *bloquesBitmapFS;
+uint32_t *bloquesDatos;
+uint32_t largoBitmap;
+uint32_t *bloquesBitmap;
+uint32_t* inicioBitmap;
 off_t largoAlmacenamiento;
 int disco;
-char* bitArrayFS;
 
-GFile *tablas;
+uint32_t inicioTablas;
 
+GFile *mapTablas;
+t_bitarray *mapBitmap;
 
 t_config* leer_config(void);
-
 void iniciarLog(void);
 void iniciarServer(void);
 void apagarServer(void);
 
-void leerHead(void);
-
-void cargarAlmacenamiento(void);
 void cargarBitArray();
 void cargarTablasNodos(void);
-
+void cargarAlmacenamiento(void);
 void descargarAlmacenamiento();
 
-void leerBloque(int bloque, void* datos);
-void escribirBloque(int bloqueObjetivo, void*datos);
+void leerHead(void);
 
-void borrarBloque(int bloque);
+void leerBloque(uint32_t bloque, void* datos);
+void escribirBloque(uint32_t bloque, void* datos);
+void borrarBloque(uint32_t bloque);
 
-int bloquesLibres(void);
-
-int buscarBloqueDisponible();
+uint32_t buscarBloqueDisponible(void);
 int buscarTablaDisponible(void);
 
-void archivoNuevo(char* nombre,void*datos, void*padre);
+uint32_t contadorBloquesLibres(void);
+int contadorTablasLibres(void);
+
+void crearPunterosIndirectos(GFile *tabla, int cantidad);
+
+GFile* devolverTabla(int numeroTabla);
+
+void archivoNuevo(unsigned char* nombre, void* datos, uint32_t tamanio, uint32_t padre);
+void borrarArchivo(void);
+
+void sincronizarBitArray(void);
+void sincronizarTabla(void);
+
+void conteos();
 
 #endif /* SAC_SERVER_H_ */
