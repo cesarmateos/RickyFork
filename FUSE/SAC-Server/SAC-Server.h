@@ -65,8 +65,8 @@ void crearPunterosIndirectos(GFile *tabla, int cantidad);
 
 GFile* devolverTabla(int numeroTabla);
 
-void archivoNuevo(char* nombre, void* datos, uint32_t tamanio, uint32_t padre);
-void crearDirectorio(char* nombre, uint32_t padre);
+void archivoNuevo(char* nombre, void* datos, uint32_t tamanio, int padre);
+void crearDirectorio(char* nombre, int padre);
 void crearRaiz(void);
 void borrarArchivo(void);
 

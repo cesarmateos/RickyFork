@@ -213,7 +213,7 @@ void crearPunterosIndirectos(GFile *tabla, int cantidad){ //TERMINAR
 GFile* devolverTabla(int numeroTabla){
 	return (mapTablas + numeroTabla);
 }
-void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, uint32_t padre){
+void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, int padre){
 	int numeroTablaAUsar = 0;
 	GFile* tabla = malloc(sizeof(GFile));
 	ptrGBloque* arrayPunterosIndirectos;
@@ -239,7 +239,7 @@ void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, uint32_t padre){
 
 				int largoNombre = strlen(nombre);
 				memcpy(tabla->fname,nombre,largoNombre);
-				tabla->parent_dir_block = padre;
+				tabla->tablaPadre = padre;
 				tabla->file_size = tamanio;
 				tabla->c_date = fechaActual;
 				tabla->m_date = fechaActual;
@@ -284,10 +284,10 @@ void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, uint32_t padre){
 	}
 	sincronizarTabla();
 	sincronizarBitArray();
-	//free(tabla);
+	//free(tabla);  //ARMA QUILOMBO CON ESE FREE - VER
 }
 
-void crearDirectorio(char* nombre, uint32_t padre){
+void crearDirectorio(char* nombre, int padre){
 	int numeroTablaAUsar = 0;
 	GFile* tabla = malloc(sizeof(GFile));
 
@@ -303,12 +303,12 @@ void crearDirectorio(char* nombre, uint32_t padre){
 		tabla->state = 2;
 		int largoNombre = strlen(nombre);
 		memcpy(tabla->fname,nombre,largoNombre);
-		tabla->parent_dir_block = padre;
+		tabla->tablaPadre = padre;
 		tabla->c_date = fechaActual;
 		tabla->m_date = fechaActual;
 	}
 	sincronizarTabla();
-	Logger_Log(LOG_INFO, "Se creo el directorio: %s.", nombre);
+	Logger_Log(LOG_INFO, "Se creo el directorio: %s. en el bloque: %d, padre: %d", nombre,numeroTablaAUsar,padre);
 }
 
 void crearRaiz(void){
@@ -316,7 +316,7 @@ void crearRaiz(void){
 	tabla = devolverTabla(0);
 	tabla->state = 2;
 	memcpy(tabla->fname,"/",1);
-	tabla->parent_dir_block = -1;
+	tabla->tablaPadre = -1;
 	sincronizarTabla();
 }
 
@@ -348,14 +348,41 @@ int* encontrarPadres(char* nombre){
 }
 
 int localizarTablaArchivo(char* path){
-	int tablaArchivo = 0;
-	char* extracto = malloc(GFILENAMELENGTH);
+	int numeroTabla = 0;
+	int tamanio = strlen(path);
+	int nuevoTamanio = 0;
+	char* extracto;
+	char* sobrante = malloc(nuevoTamanio);
 	int caracter = '/';
+	GFile* tabla = malloc(sizeof(GFile));
 
-	while(){
-
+	extracto = strrchr(path,caracter);
+	nuevoTamanio = tamanio - strlen(extracto);
+	//memcpy(sobrante, path, nuevoTamanio);
+	for(int k = 0; k < nuevoTamanio; k++){
+		*(sobrante+k) = *(path+k);
 	}
-	return tablaArchivo;
+
+
+	for(int i = 0; i < GFILEBYTABLE ; i++){
+		numeroTabla = i;
+		tabla = devolverTabla(numeroTabla);
+		while(strcmp(  (*tabla->fname) , (*(extracto +1)) ) == 0){
+			//if(strcmp("/",sobrante) == 0){
+			if('/' == sobrante){
+				//free(tabla);
+				return i;
+			}else{
+				numeroTabla = tabla->tablaPadre;
+				tabla = devolverTabla(numeroTabla);
+				extracto = strrchr(sobrante,caracter);
+				nuevoTamanio = tamanio - strlen(extracto);
+				strncpy(sobrante, path,nuevoTamanio);
+			}
+		}
+	}
+
+	return -1;
 }
 
 void conteos(){
@@ -407,30 +434,22 @@ int main(){
 	char nombre1 [] =  "Prueba.txt";
 	char nombre2 [] =  "Test.pdf";
 	char nombre3 [] =  "PrimerDirectorio";
-	char ruta [] = "/dir1/dire/test/Prueba.txt";
-	char* extracto = malloc(GFILENAMELENGTH);
-
-	int caracter = '/';
-
-	extracto = strrchr(ruta,caracter);
-
+	char nombre4 [] =  "SegundoDirectorio";
+	char ruta [] = "/PrimerDirectorio/SegundoDirectorio/Prueba.txt";
 
 	int largoPrueba = strlen(prueba);
 	int largoPrueba2 = strlen(prueba2);
 
-	printf("Ulitmo nombre: %s .\n", extracto);
-
-	int*  listaPadres;
-	listaPadres = encontrarPadres((extracto+1));
-	printf("Padre de %s es: %d .\n", extracto, *listaPadres);
-
-	/*
 	crearDirectorio(nombre3,0);
+	crearDirectorio(nombre4,1);
 
-	archivoNuevo(nombre1,prueba,largoPrueba,1);
-	archivoNuevo(nombre2,prueba2,largoPrueba2,1);
+	archivoNuevo(nombre1,prueba,largoPrueba,2);
+	archivoNuevo(nombre2,prueba2,largoPrueba2,2);
 
-*/
+	int tablaArch = 0;
+	tablaArch = localizarTablaArchivo(ruta);
+	printf("La tabla del archivo %s es la: %d .\n", ruta, tablaArch);
+
 	//iniciarServer();
 	//apagarServer();
 
