@@ -48,15 +48,11 @@ void mapearBitmap(void){
 void cargarAlmacenamiento(void){
 
 	t_config* fuseConfig;
-
 	char* nombreHD;
 
 	fuseConfig = leer_config();
-
 	nombreHD = config_get_string_value(fuseConfig, "DISCO");
-
 	disco = open(nombreHD, O_RDWR);
-
 
 	if (!disco) {
 		Logger_Log(LOG_ERROR, "Error al abrir el disco %s.", nombreHD);
@@ -72,6 +68,8 @@ void cargarAlmacenamiento(void){
 		Logger_Log(LOG_INFO, "Disco %s cargado exitosamente. Contiene %d bytes.", nombreHD, largoAlmacenamiento);
 
 		config_destroy(fuseConfig);
+
+		leerHead();
 	}
 
 }
@@ -127,6 +125,8 @@ void leerHead(void){
 	mapearTablas();
 	mapearBitmap();
 
+	crearRaiz();
+
 	conteos();
 
 	free(temporario);
@@ -139,6 +139,7 @@ void leerBloque(uint32_t bloque, void* datos){
 	memcpy(datos,extrae,BLOCKSIZE);
 	munmap(extrae,BLOCKSIZE);
 }
+
 
 void escribirBloque(uint32_t bloque, void* datos){
 	void *extrae = malloc(BLOCKSIZE);
@@ -155,7 +156,7 @@ void borrarBloque(uint32_t bloque){
 
 
 uint32_t buscarBloqueDisponible(void){
-	uint32_t indice = 0;
+	uint32_t indice = GFILEBYTABLE;
 	uint32_t largoBitmap = bitarray_get_max_bit(mapBitmap);
 	while(bitarray_test_bit(mapBitmap,indice) & ( indice < largoBitmap ) ){
 		indice++;
@@ -170,11 +171,11 @@ uint32_t buscarBloqueDisponible(void){
 
 int buscarTablaDisponible(void){
 	int i = 0;
-	while( (  (int)( (mapTablas + i)->state )   )  &  ( i < GFILEBYTABLE) ){
+	while( ( ( (int)( (mapTablas + i)->state )) != 0   )  &  ( i < GFILEBYTABLE)   ){
 		i++;
 	}
 	if(i == GFILEBYTABLE){
-		return -1; //Ver salida de este error;
+		return -1;
 	}else{
 		return i;
 	}
@@ -212,9 +213,9 @@ void crearPunterosIndirectos(GFile *tabla, int cantidad){ //TERMINAR
 GFile* devolverTabla(int numeroTabla){
 	return (mapTablas + numeroTabla);
 }
-void archivoNuevo(unsigned char* nombre, void*datos, uint32_t tamanio, uint32_t padre){
+void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, uint32_t padre){
 	int numeroTablaAUsar = 0;
-	GFile* tabla; // = malloc(sizeof(GFile));
+	GFile* tabla = malloc(sizeof(GFile));
 	ptrGBloque* arrayPunterosIndirectos;
 
 	numeroTablaAUsar = buscarTablaDisponible();
@@ -236,15 +237,8 @@ void archivoNuevo(unsigned char* nombre, void*datos, uint32_t tamanio, uint32_t 
 				crearPunterosIndirectos(tabla,bloquesNecesariosIndirectos);
 				tabla->state = 1;
 
-				/*
-				memcpy(tabla->fname,nombre,GFILENAMELENGTH);
-				memcpy(tabla->parent_dir_block, padre, sizeof(uint32_t) );
-				memcpy(tabla->file_size, tamanio, sizeof(uint32_t) );
-				memcpy(tabla->c_date, fechaActual, sizeof(uint64_t) );
-				memcpy(tabla->m_date, fechaActual, sizeof(uint64_t) );
-				 */
-
-				memcpy(tabla->fname,nombre,GFILENAMELENGTH);
+				int largoNombre = strlen(nombre);
+				memcpy(tabla->fname,nombre,largoNombre);
 				tabla->parent_dir_block = padre;
 				tabla->file_size = tamanio;
 				tabla->c_date = fechaActual;
@@ -281,6 +275,7 @@ void archivoNuevo(unsigned char* nombre, void*datos, uint32_t tamanio, uint32_t 
 					free(arrayPunterosABloques);
 				}
 				free(segmentoDatos);
+				Logger_Log(LOG_INFO, "Se creo el archivo: %s.", nombre);
 
 			}else{
 				Logger_Log(LOG_ERROR, "No hay espacio suficiente en el almacenamiento para guardar el archivo.");
@@ -291,9 +286,10 @@ void archivoNuevo(unsigned char* nombre, void*datos, uint32_t tamanio, uint32_t 
 	sincronizarBitArray();
 	//free(tabla);
 }
-void crearDirectorio(unsigned char* nombre, uint32_t padre){
+
+void crearDirectorio(char* nombre, uint32_t padre){
 	int numeroTablaAUsar = 0;
-	GFile* tabla; // = malloc(sizeof(GFile));
+	GFile* tabla = malloc(sizeof(GFile));
 
 	numeroTablaAUsar = buscarTablaDisponible();
 
@@ -305,28 +301,42 @@ void crearDirectorio(unsigned char* nombre, uint32_t padre){
 		tabla = devolverTabla(numeroTablaAUsar);
 
 		tabla->state = 2;
-		memcpy(tabla->fname,nombre,GFILENAMELENGTH);
+		int largoNombre = strlen(nombre);
+		memcpy(tabla->fname,nombre,largoNombre);
 		tabla->parent_dir_block = padre;
 		tabla->c_date = fechaActual;
 		tabla->m_date = fechaActual;
 	}
 	sincronizarTabla();
+	Logger_Log(LOG_INFO, "Se creo el directorio: %s.", nombre);
 }
 
-void* leerArchivo(unsigned char* path){
+void crearRaiz(void){
+	GFile* tabla = malloc(sizeof(GFile));
+	tabla = devolverTabla(0);
+	tabla->state = 2;
+	memcpy(tabla->fname,"/",1);
+	tabla->parent_dir_block = -1;
+	sincronizarTabla();
+}
+
+void* leerArchivo(char* path){
 	void* datos;
-
-	return datos;
+	int tabla = 0;
+	tabla = localizarTablaArchivo(path);
+	if(tabla == -1){
+		Logger_Log(LOG_INFO, "No existe el archivo con la ruta: %s.", path);
+		return -1;
+	}else{
+		return datos;
+	}
 }
-void borrarArchivo(void){ //SIN EMPEZAR
 
-}
-
-int* encontrarPadres(unsigned char* nombre){
+int* encontrarPadres(char* nombre){
 	int* padresProbables;
 	int aciertos = 0;
 	for(int i = 0; i < GFILEBYTABLE ; i++){
-		if((mapTablas + i)->fname == nombre){
+		if(*(mapTablas + i)->fname == *nombre){
 			*(padresProbables + aciertos) = i;
 			aciertos++;
 		}
@@ -337,19 +347,15 @@ int* encontrarPadres(unsigned char* nombre){
 	return padresProbables;
 }
 
-int localizarTablaArchivo(unsigned char* nombre){
-	int bloqueObjetivo;
-	return bloqueObjetivo;
-}
+int localizarTablaArchivo(char* path){
+	int tablaArchivo = 0;
+	char* extracto = malloc(GFILENAMELENGTH);
+	int caracter = '/';
 
-void memcpySegmento(void *destino, void *origen, size_t offsetOrigen, size_t offsetDestino, size_t largo){
+	while(){
 
-   char *corigen = (char *)origen;
-   char *cdestino = (char *)destino;
-
-   for(int i = 0; i< largo;i++){
-		cdestino[i+offsetDestino] = corigen[i+offsetOrigen];
 	}
+	return tablaArchivo;
 }
 
 void conteos(){
@@ -395,17 +401,40 @@ int main(){
 
 	cargarAlmacenamiento();
 
-	leerHead();
-
 	char prueba[] = "ESTA ES UNA PRUEBA PARA VER SI ANDA EL NUEVO ARCHIVO";
+	char prueba2[] = "ARCHIVO DE PRUEBA 2 JAJAJJAJAJA RAJAJAJA POPO CUCUCU PIPIPI";
+
+	char nombre1 [] =  "Prueba.txt";
+	char nombre2 [] =  "Test.pdf";
+	char nombre3 [] =  "PrimerDirectorio";
+	char ruta [] = "/dir1/dire/test/Prueba.txt";
+	char* extracto = malloc(GFILENAMELENGTH);
+
+	int caracter = '/';
+
+	extracto = strrchr(ruta,caracter);
+
 
 	int largoPrueba = strlen(prueba);
+	int largoPrueba2 = strlen(prueba2);
 
-	//archivoNuevo("Prueba.txt",prueba,largoPrueba,0);
+	printf("Ulitmo nombre: %s .\n", extracto);
 
+	int*  listaPadres;
+	listaPadres = encontrarPadres((extracto+1));
+	printf("Padre de %s es: %d .\n", extracto, *listaPadres);
+
+	/*
+	crearDirectorio(nombre3,0);
+
+	archivoNuevo(nombre1,prueba,largoPrueba,1);
+	archivoNuevo(nombre2,prueba2,largoPrueba2,1);
+
+*/
 	//iniciarServer();
-
 	//apagarServer();
+
+	descargarAlmacenamiento();
 
 	return 0;
 }
