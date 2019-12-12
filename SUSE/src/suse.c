@@ -11,7 +11,6 @@
 #include<readline/readline.h>
 #include"kemmens/SocketServer.h"
 
-static int gradoDeMutiprogramacion;
 struct t_hilo{
 	int identificador;
 	char* tiempoDeEjecucion;
@@ -67,14 +66,20 @@ T_hilo* proximoHiloAejecutar(T_programa programa){
 }
 
 bool sjf(T_hilo* hiloA,T_hilo* hiloB){
-	int a = hiloA->tiempoEstimado * 0.5 + hiloA->tiempoReal *0.5;
-	int b = hiloB->tiempoEstimado * 0.5 + hiloB->tiempoReal *0.5;
+	t_config* suseconfig = config_create("suse.config");
+	int alpha = config_get_int_value(suseconfig,"ALPHA_SJF");
+	int a = hiloA->tiempoEstimado * alpha + hiloA->tiempoReal *alpha;
+	int b = hiloB->tiempoEstimado * alpha + hiloB->tiempoReal *alpha;
+	free(suseconfig);
 	return a > b;
 }
 
 void CargarPrograma(T_programa* programa,t_list* lista){
-	if(list_size(lista) < gradoDeMutiprogramacion)
+	/*t_config* suseconfig = config_create("suse.config");
+	int gradoDeMultiprogramacion = config_get_int_value(suseconfig,"MAX_MULTIPROG");
+	if(list_size(lista) < gradoDeMultiprogramacion)
 		list_add(lista,programa);
+	free(suseconfig);*/
 }
 void bloquearHilo(T_programa* programa,t_list* blockeado){
 	T_hilo* hiloBloqueado = programa->exec;
@@ -83,6 +88,7 @@ void bloquearHilo(T_programa* programa,t_list* blockeado){
 }
 int main() {
 	t_list* listaPrograma = list_create();
+	t_list* blockeados = list_create();
 	T_hilo hiloA = crearHilo(1,3);
 	T_hilo hiloB = crearHilo(2,2);
 	T_hilo* ptr;
@@ -91,6 +97,5 @@ int main() {
 	list_sort(listaPrograma,sjf);
 	ptr = list_get(listaPrograma,0);
 	printf("el hilo mas chico es %d\n",ptr->identificador);
-	t_list* blockeados = list_create();
 	return EXIT_SUCCESS;
 }
