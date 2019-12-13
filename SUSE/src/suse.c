@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
 #include<commons/log.h>
 #include<commons/string.h>
 #include<commons/bitarray.h>
@@ -13,9 +14,9 @@
 
 struct t_hilo{
 	int identificador;
-	char* tiempoDeEjecucion;
-	int tiempoReal;
-	int tiempoEstimado;
+	time_t tiempoDeEjecucion;
+	double tiempoReal;
+	double tiempoEstimado;
 };
 typedef struct t_hilo T_hilo;
 
@@ -52,10 +53,12 @@ void ejecutarHilo(T_programa* programa,T_hilo* hiloAejecutar){
 	programa->exec = hiloAejecutar;
 }
 
-T_hilo crearHilo(int identificador,int tiempoEstimado){
+T_hilo crearHilo(int identificador,double tiempoEstimado){
 	T_hilo hilo;
+	time_t tiempoactual;
+	time(&tiempoactual);
 	hilo.identificador = identificador;
-	hilo.tiempoDeEjecucion = temporal_get_string_time();
+	hilo.tiempoDeEjecucion = tiempoactual;
 	hilo.tiempoEstimado = tiempoEstimado;
 	hilo.tiempoReal = 0;
 	return hilo;
@@ -66,12 +69,12 @@ T_hilo* proximoHiloAejecutar(T_programa programa){
 }
 
 bool sjf(T_hilo* hiloA,T_hilo* hiloB){
-	t_config* suseconfig = config_create("suse.config");
-	int alpha = config_get_int_value(suseconfig,"ALPHA_SJF");
-	int a = hiloA->tiempoEstimado * alpha + hiloA->tiempoReal *alpha;
-	int b = hiloB->tiempoEstimado * alpha + hiloB->tiempoReal *alpha;
-	free(suseconfig);
-	return a > b;
+	/*t_config* suseconfig = config_create("suse.config");
+	double alpha = config_get_double_value(suseconfig,"ALPHA_SJF");*/
+	double a = hiloA->tiempoEstimado * 0.5 + hiloA->tiempoReal * (1- 0.5);
+	double b = hiloB->tiempoEstimado * 0.5 + hiloB->tiempoReal * (1- 0.5);
+	/*free(suseconfig);*/
+	return a < b;
 }
 
 void CargarPrograma(T_programa* programa,t_list* lista){
@@ -83,6 +86,10 @@ void CargarPrograma(T_programa* programa,t_list* lista){
 }
 void bloquearHilo(T_programa* programa,t_list* blockeado){
 	T_hilo* hiloBloqueado = programa->exec;
+	time_t tiemponuevo;
+	time(&tiemponuevo);
+	hiloBloqueado->tiempoReal = difftime(tiemponuevo,hiloBloqueado->tiempoDeEjecucion);
+	hiloBloqueado->tiempoDeEjecucion = tiemponuevo;
 	programa->exec = NULL;
 	list_add(blockeado,hiloBloqueado);
 }
@@ -95,7 +102,10 @@ int main() {
 	list_add(listaPrograma,&hiloA);
 	list_add(listaPrograma,&hiloB);
 	list_sort(listaPrograma,sjf);
+	/*t_config* suseconfig = config_create("suse.config");
+	double alpha = config_get_double_value(suseconfig,"ALPHA_SJF");*/
 	ptr = list_get(listaPrograma,0);
 	printf("el hilo mas chico es %d\n",ptr->identificador);
+	/*printf("el alpha es %f",alpha);*/
 	return EXIT_SUCCESS;
 }
