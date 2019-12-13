@@ -203,9 +203,9 @@ void crearPunterosIndirectos(GFile *tabla, int cantidad){ //TERMINAR
 	ptrGBloque* arrayPunterosIndirectos = malloc(sizeof(ptrGBloque) *BLKINDIRECT);
 	uint32_t bloqueVacio = 0;
 	for(int i = 0; i < cantidad ; i++){
-		bloqueVacio = buscarBloqueDisponible();  //Busco bloque Disponible.
-		*(arrayPunterosIndirectos + i) = bloqueVacio; //Copio el numero de bloque disponible en el array.
-		bitarray_set_bit(mapBitmap,bloqueVacio); //Reservo el bloque.
+		bloqueVacio = buscarBloqueDisponible();				//Busco bloque Disponible.
+		*(arrayPunterosIndirectos + i) = bloqueVacio;		//Copio el numero de bloque disponible en el array.
+		bitarray_set_bit(mapBitmap,bloqueVacio);			//Reservo el bloque.
 	}
 	memcpy(tabla->blk_indirect,arrayPunterosIndirectos,cantidad);
 }
@@ -255,22 +255,22 @@ void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, int padre){
 
 				for(int i = 0; i < bloquesNecesariosIndirectos; i++){
 
-					bloqueIndirecto = *(arrayPunterosIndirectos + i);  // Busco bloque con punteros a bloques
+					bloqueIndirecto = *(arrayPunterosIndirectos + i);								// Busco bloque con punteros a bloques
 
 					if(i == bloquesNecesariosIndirectos - 1){
 						tope = bloquesNecesariosDatos - ((bloquesNecesariosIndirectos - 1)*1024);
 					}else{
 						tope = 1024;
 					}
-					ptrGBloque* arrayPunterosABloques = malloc(sizeof(ptrGBloque)*tope); // Creo array con punteros a bloques
+					ptrGBloque* arrayPunterosABloques = malloc(sizeof(ptrGBloque)*tope);			// Creo array con punteros a bloques
 
 					for(int j =  0; j < tope ;j++){
-						bloqueParaDatos = buscarBloqueDisponible();  // Busco bloque disponible
-						*(arrayPunterosABloques + j) = bloqueParaDatos;  // Guardo en en array de punteros a bloques el numero de bloque a apuntar
-						bitarray_set_bit(mapBitmap,bloqueParaDatos);  // Reservo el bloque en el bitmap
-						bloquesAcumulados = (i * 1024) + j ;  // bloques ya guardados
+						bloqueParaDatos = buscarBloqueDisponible();									// Busco bloque disponible
+						*(arrayPunterosABloques + j) = bloqueParaDatos;								// Guardo en en array de punteros a bloques el numero de bloque a apuntar
+						bitarray_set_bit(mapBitmap,bloqueParaDatos);								// Reservo el bloque en el bitmap
+						bloquesAcumulados = (i * 1024) + j ;										// bloques ya guardados
 						memcpy(segmentoDatos,(datos + (bloquesAcumulados* BLOCKSIZE)),BLOCKSIZE);
-						escribirBloque(bloqueParaDatos,segmentoDatos); //Guardo Segmento en el bloque
+						escribirBloque(bloqueParaDatos,segmentoDatos);								//Guardo Segmento en el bloque
 					}
 					free(arrayPunterosABloques);
 				}
@@ -321,13 +321,35 @@ void crearRaiz(void){
 }
 
 void* leerArchivo(char* path){
-	void* datos;
-	int tabla = 0;
-	tabla = localizarTablaArchivo(path);
-	if(tabla == -1){
+	int numeroTabla = 0;
+	numeroTabla = localizarTablaArchivo(path);
+	if(numeroTabla == -1){
 		Logger_Log(LOG_INFO, "No existe el archivo con la ruta: %s.", path);
 		return -1;
 	}else{
+		void* datos;
+		void* datosTemporarios;
+		GFile* tabla = malloc(sizeof(GFile));
+		tabla = devolverTabla(numeroTabla);
+		ptrGBloque punteros[BLKINDIRECT];
+		ptrGBloque* datosBloqueIndirecto = malloc(sizeof(BLOCKSIZE));
+		int i = 0;
+		int k = 0;
+		uint32_t bloque = 0;
+		while((tabla->blk_indirect + i) > 0){
+			bloque = tabla->blk_indirect;						//Busco el numero del bloque con punteros a bloques de datos
+			leerBloque(bloque,datosBloqueIndirecto); 			//Leo los punteros en el bloque con punteros a bloques que datos
+			int j = 0;
+			while( (datosBloqueIndirecto + j) > 0 ){			//Evaluó si el puntero tiene la direccion de algun bloque.
+				bloque = *(datosBloqueIndirecto + j);			//Extraigo el numero del bloque apuntado.
+				leerBloque(bloque,datosTemporarios);			//Extraigo los datos del bloque.
+				memcpy((datos + k),datosTemporarios,BLOCKSIZE);	//Copio los datos extraidos a los datos consolidados.
+				j++;
+				k++;
+			}
+			i++;
+		}
+
 		return datos;
 	}
 }
@@ -348,43 +370,95 @@ int* encontrarPadres(char* nombre){
 }
 
 int localizarTablaArchivo(char* path){
-	int numeroTabla = 0;
+	int numeroTablaPadre = 0;
 	int tamanio = strlen(path);
-	int nuevoTamanio = 0;
+	int tamanioSobrante = 0;
+	int tamanioExtracto = 0;
 	char* extracto;
-	char* sobrante = malloc(nuevoTamanio);
+	char* sobrante = malloc(tamanio);
+	char* segmentoActual = malloc(GFILENAMELENGTH);
 	int caracter = '/';
 	GFile* tabla = malloc(sizeof(GFile));
 
-	extracto = strrchr(path,caracter);
-	nuevoTamanio = tamanio - strlen(extracto);
-	//memcpy(sobrante, path, nuevoTamanio);
-	for(int k = 0; k < nuevoTamanio; k++){
-		*(sobrante+k) = *(path+k);
-	}
+	extracto = strrchr(path,caracter);								//Extraigo el nombre del archivo
+	tamanioExtracto =  strlen(extracto);							//Calculo el largo del nombre del archivo
+	tamanioSobrante = tamanio - tamanioExtracto;					//Calculo el largo del resto de la ruta
+	memcpy(segmentoActual,extracto,tamanioExtracto);
+	memcpy(sobrante, path, tamanioSobrante);						//Copio en sobrante el resto de la ruta.
 
 
 	for(int i = 0; i < GFILEBYTABLE ; i++){
-		numeroTabla = i;
-		tabla = devolverTabla(numeroTabla);
-		while(strcmp(  (*tabla->fname) , (*(extracto +1)) ) == 0){
-			//if(strcmp("/",sobrante) == 0){
-			if('/' == sobrante){
-				//free(tabla);
+		numeroTablaPadre = i;
+		tabla = devolverTabla(numeroTablaPadre);
+		while(memcmp((tabla->fname) , ((segmentoActual +1)), (tamanioExtracto -1) )  == 0 ){
+			*(sobrante + tamanioSobrante) = '\0';						//Pongo en sobrante el caracter nulo
+			*(segmentoActual + tamanioExtracto) = '\0';
+			numeroTablaPadre = tabla->tablaPadre;						//Asgino la tabla Padre al numero de tabla
+			if(tamanioSobrante == 0 && numeroTablaPadre == 0){
+				free(segmentoActual);
+				free(sobrante);
 				return i;
 			}else{
-				numeroTabla = tabla->tablaPadre;
-				tabla = devolverTabla(numeroTabla);
-				extracto = strrchr(sobrante,caracter);
-				nuevoTamanio = tamanio - strlen(extracto);
-				strncpy(sobrante, path,nuevoTamanio);
+				tabla = devolverTabla(numeroTablaPadre);
+				extracto = strrchr(sobrante,caracter);					//Extraigo el siguiente directorio de la ruta
+				tamanioExtracto =  strlen(extracto);					//Calculo el largo el nuevo extracto.
+				memcpy(segmentoActual,extracto,tamanioExtracto);
+				tamanioSobrante -= tamanioExtracto;						//Calculo el largo del resto de la ruta.
 			}
 		}
 	}
-
+	free(segmentoActual);
+	free(sobrante);
 	return -1;
 }
+/*
+int localizarTablaArchivoVIEJA(char* path){
+	int numeroTablaPadre = 0;
+	int tamanio = strlen(path);
+	int tamanioSobrante = 0;
+	int tamanioExtracto = 0;
+	char* extracto;
+	char* sobrante;
+	char* segmentoActual;
+	int caracter = '/';
+	GFile* tabla = malloc(sizeof(GFile));
 
+	extracto = strrchr(path,caracter);								//Extraigo el nombre del archivo
+	tamanioExtracto =  strlen(extracto);							//Calculo el largo del nombre del archivo
+	tamanioSobrante = tamanio - tamanioExtracto;					//Calculo el largo del resto de la ruta
+	memcpy(segmentoActual,extracto,tamanioExtracto);
+
+	memcpy(sobrante, path, tamanioSobrante);						//Copio en sobrante el resto de la ruta.
+
+
+	for(int i = 0; i < GFILEBYTABLE ; i++){
+		numeroTablaPadre = i;
+		tabla = devolverTabla(numeroTablaPadre);
+		while(memcmp((tabla->fname) , ((segmentoActual +1)), (tamanioExtracto -1) )  == 0 ){
+			*(sobrante + tamanioSobrante) = '\0';							//Pongo en sobrante el caracter nulo
+			*(segmentoActual + tamanioExtracto) = '\0';
+			if(numeroTablaPadre == 0){
+				return i;
+			}else{
+				numeroTablaPadre = tabla->tablaPadre;					//Asgino la tabla Padre al numero de tabla
+				tabla = devolverTabla(numeroTablaPadre);
+				extracto = strrchr(sobrante,caracter);					//Extraigo el siguiente directorio de la ruta
+				if(tamanioSobrante == 0){
+					tamanioExtracto = 2;
+					*(segmentoActual +1) = '/';
+					*(segmentoActual +2) = '\0';
+				}else{
+					tamanioExtracto =  strlen(extracto);				//Calculo el largo el nuevo extracto.
+					memcpy(segmentoActual,extracto,tamanioExtracto);
+				}
+				tamanioSobrante -= tamanioExtracto;						//Calculo el largo del resto de la ruta.
+
+			}
+		}
+	}
+	return -1;
+}
+*/
 void conteos(){
 
 	uint32_t bloquesUso = 0;
@@ -427,7 +501,7 @@ int main(){
 	iniciarLog();
 
 	cargarAlmacenamiento();
-
+/*
 	char prueba[] = "ESTA ES UNA PRUEBA PARA VER SI ANDA EL NUEVO ARCHIVO";
 	char prueba2[] = "ARCHIVO DE PRUEBA 2 JAJAJJAJAJA RAJAJAJA POPO CUCUCU PIPIPI";
 
@@ -435,7 +509,6 @@ int main(){
 	char nombre2 [] =  "Test.pdf";
 	char nombre3 [] =  "PrimerDirectorio";
 	char nombre4 [] =  "SegundoDirectorio";
-	char ruta [] = "/PrimerDirectorio/SegundoDirectorio/Prueba.txt";
 
 	int largoPrueba = strlen(prueba);
 	int largoPrueba2 = strlen(prueba2);
@@ -446,14 +519,20 @@ int main(){
 	archivoNuevo(nombre1,prueba,largoPrueba,2);
 	archivoNuevo(nombre2,prueba2,largoPrueba2,2);
 
+*/
+	char* ruta = "/PrimerDirectorio/SegundoDirectorio/Prueba.txt";
 	int tablaArch = 0;
 	tablaArch = localizarTablaArchivo(ruta);
 	printf("La tabla del archivo %s es la: %d .\n", ruta, tablaArch);
 
+	char* datos;
+	datos = leerArchivo(ruta);
+	printf("El archivo %s dice: %s .\n", ruta, datos);
+
 	//iniciarServer();
 	//apagarServer();
 
-	descargarAlmacenamiento();
+	//descargarAlmacenamiento();
 
 	return 0;
 }
