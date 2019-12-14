@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
+#include <semaphore.h>
 #include<commons/log.h>
 #include<commons/string.h>
 #include<commons/bitarray.h>
@@ -14,7 +15,7 @@
 
 struct t_hilo{
 	int identificador;
-	int pid;//este es el identificador del programa
+	int pid;//este es el identificador del programa vendria a ser el socket
 	time_t tiempoDeEjecucion;
 	double tiempoReal;
 	double tiempoEstimado;
@@ -22,7 +23,7 @@ struct t_hilo{
 typedef struct t_hilo T_hilo;
 
 struct t_programa{
-	int identificador;
+	int identificador;//numero de socket;
 	t_list* ready;
 	T_hilo* exec;
 };
@@ -33,6 +34,8 @@ struct t_semaforo{
 	int valor;
 };
 typedef struct t_semaforo T_semaforo;
+
+
 
 void iniciarServidor(){
 	SocketServer_Start("SUSE",3801);
@@ -62,7 +65,6 @@ void crearHilo(int identificador,double tiempoEstimado,t_list* new){
 	hilo.tiempoDeEjecucion = tiempoactual;
 	hilo.tiempoEstimado = tiempoEstimado;
 	hilo.tiempoReal = 0;
-	//semaforowait
 	list_add(new,&hilo);
 }
 
@@ -99,20 +101,33 @@ void eliminarHilo(T_programa* programa,int index){
 	list_remove(programa->ready,index);
 	//semaforo signal
 }
+T_programa* encontrarPrograma(int pid,t_list* lista){
+	int buscarprograma(T_programa* programa){
+		if(programa->identificador == pid)
+			return 1;
+	}
+	return list_find(lista,(void*)buscarprograma);
+}
+void cargarhilos(t_list* new,t_list* listaProgramas){
+	while(list_size(new) != 0){
+		//semaforowait
+		T_hilo* hiloAagregar = list_remove(new,0);
+		T_programa* programa = encontrarPrograma(hiloAagregar->pid,listaProgramas);
+		list_add(programa->ready,hiloAagregar);
+	}
+}
 int main() {
 	t_list* listaPrograma = list_create();
 	t_list* blockeados = list_create();
 	t_list* new = list_create();
-	T_hilo hiloA = crearHilo(1,3);
+	/*T_hilo hiloA = crearHilo(1,3);
 	T_hilo hiloB = crearHilo(2,2);
 	T_hilo* ptr;
 	list_add(listaPrograma,&hiloA);
 	list_add(listaPrograma,&hiloB);
 	list_sort(listaPrograma,sjf);
-	/*t_config* suseconfig = config_create("suse.config");
-	double alpha = config_get_double_value(suseconfig,"ALPHA_SJF");*/
 	ptr = list_get(listaPrograma,0);
-	printf("el hilo mas chico es %d\n",ptr->identificador);
-	/*printf("el alpha es %f",alpha);*/
+	printf("el hilo mas chico es %d\n",ptr->identificador);*/
+
 	return EXIT_SUCCESS;
 }
