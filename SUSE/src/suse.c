@@ -14,6 +14,7 @@
 
 struct t_hilo{
 	int identificador;
+	int pid;//este es el identificador del programa
 	time_t tiempoDeEjecucion;
 	double tiempoReal;
 	double tiempoEstimado;
@@ -53,7 +54,7 @@ void ejecutarHilo(T_programa* programa,T_hilo* hiloAejecutar){
 	programa->exec = hiloAejecutar;
 }
 
-T_hilo crearHilo(int identificador,double tiempoEstimado){
+void crearHilo(int identificador,double tiempoEstimado,t_list* new){
 	T_hilo hilo;
 	time_t tiempoactual;
 	time(&tiempoactual);
@@ -61,7 +62,8 @@ T_hilo crearHilo(int identificador,double tiempoEstimado){
 	hilo.tiempoDeEjecucion = tiempoactual;
 	hilo.tiempoEstimado = tiempoEstimado;
 	hilo.tiempoReal = 0;
-	return hilo;
+	//semaforowait
+	list_add(new,&hilo);
 }
 
 T_hilo* proximoHiloAejecutar(T_programa programa){
@@ -69,11 +71,11 @@ T_hilo* proximoHiloAejecutar(T_programa programa){
 }
 
 bool sjf(T_hilo* hiloA,T_hilo* hiloB){
-	/*t_config* suseconfig = config_create("suse.config");
-	double alpha = config_get_double_value(suseconfig,"ALPHA_SJF");*/
-	double a = hiloA->tiempoEstimado * 0.5 + hiloA->tiempoReal * (1- 0.5);
-	double b = hiloB->tiempoEstimado * 0.5 + hiloB->tiempoReal * (1- 0.5);
-	/*free(suseconfig);*/
+    t_config* suseconfig = config_create("suse.config");
+	double alpha = config_get_double_value(suseconfig,"ALPHA_SJF");
+	double a = hiloA->tiempoEstimado * alpha + hiloA->tiempoReal * (1- alpha);
+	double b = hiloB->tiempoEstimado * alpha + hiloB->tiempoReal * (1- alpha);
+	free(suseconfig);
 	return a < b;
 }
 
@@ -93,9 +95,14 @@ void bloquearHilo(T_programa* programa,t_list* blockeado){
 	programa->exec = NULL;
 	list_add(blockeado,hiloBloqueado);
 }
+void eliminarHilo(T_programa* programa,int index){
+	list_remove(programa->ready,index);
+	//semaforo signal
+}
 int main() {
 	t_list* listaPrograma = list_create();
 	t_list* blockeados = list_create();
+	t_list* new = list_create();
 	T_hilo hiloA = crearHilo(1,3);
 	T_hilo hiloB = crearHilo(2,2);
 	T_hilo* ptr;
