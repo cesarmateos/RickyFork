@@ -8,7 +8,6 @@
 #ifndef SAC_ESTRUCTURAS_H_
 #define SAC_ESTRUCTURAS_H_
 
-#include<stdint.h>
 
 #define GFILEBYTABLE 1024
 #define GFILEBYBLOCK 1
@@ -18,7 +17,18 @@
 
 #define BLOCKSIZE 4096
 
+#include<commons/bitarray.h>
+#include<commons/config.h>
+#include<commons/string.h>
+#include<readline/readline.h>
+#include<commons/log.h>
+
+#include <sys/mman.h>
+#include<inttypes.h>
+
+
 typedef uint32_t ptrGBloque;
+typedef int nroTabla;
 
 typedef struct sac_header_t { // un bloque
         char sac[3];
@@ -38,6 +48,15 @@ typedef struct sac_file_t { // un cuarto de bloque (256 bytes)
         ptrGBloque blk_indirect[BLKINDIRECT];
 } GFile;
 
+uint32_t *bloquesDatos;
+uint32_t largoBitmap;
+uint32_t *bloquesBitmap;
+uint32_t* inicioBitmap;
+off_t largoAlmacenamiento;
+int disco;
+uint32_t inicioTablas;
+GFile *mapTablas;
+t_bitarray *mapBitmap;
 
 
 #endif /* SAC_ESTRUCTURAS_H_ */
