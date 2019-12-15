@@ -13,6 +13,7 @@
 #include<readline/readline.h>
 #include"kemmens/SocketServer.h"
 
+
 struct t_hilo{
 	int identificador;
 	int pid;//este es el identificador del programa vendria a ser el socket
@@ -108,6 +109,7 @@ T_programa* encontrarPrograma(int pid,t_list* lista){
 	}
 	return list_find(lista,(void*)buscarprograma);
 }
+
 void cargarhilos(t_list* new,t_list* listaProgramas){
 	while(list_size(new) != 0){
 		//semaforowait
@@ -116,10 +118,44 @@ void cargarhilos(t_list* new,t_list* listaProgramas){
 		list_add(programa->ready,hiloAagregar);
 	}
 }
+
+void removerhilo(int identificador,t_list* lista){
+	int buscarhilo(T_hilo* hilo){
+		if(hilo->identificador == identificador)
+			return 1;
+	}
+	list_remove_by_condition(lista,(void*)buscarhilo);
+}
+void incrementarSemaforo(T_semaforo* sem,T_hilo* hilo,t_list* bloqueado,t_list* listaProgramas){
+	sem->valor += 1;
+	if(sem->valor > 0){
+		removerhilo(hilo->identificador,bloqueado);
+		T_programa* programa= encontrarPrograma(hilo->pid,listaProgramas);
+		list_add(programa->ready,hilo);
+	}
+}
+
+void decrementarSemaforo(T_semaforo* sem,T_hilo* hilo,t_list* bloqueado,t_list* listaProgramas){
+	sem->valor -= 1;
+	if(sem->valor <= 0){
+		T_programa* programa= encontrarPrograma(hilo->pid,listaProgramas);
+		programa->exec = NULL;
+		list_add(bloqueado,hilo);
+	}
+}
+
 int main() {
+	iniciarLog();
 	t_list* listaPrograma = list_create();
 	t_list* blockeados = list_create();
 	t_list* new = list_create();
+	t_config* suseconfig = config_create("suse.config");
+	char** valores = config_get_array_value(suseconfig,"SEM_IDS");
+	char** valores2 = config_get_array_value(suseconfig,"SEM_INIT");
+	char** a = valores[1];
+	char** b = valores2[0];
+	Logger_Log(LOG_INFO,"se muestra el identificador %s\n",a);
+	Logger_Log(LOG_INFO,"se muestra el identificador %s\n",(int)b);
 	/*T_hilo hiloA = crearHilo(1,3);
 	T_hilo hiloB = crearHilo(2,2);
 	T_hilo* ptr;
