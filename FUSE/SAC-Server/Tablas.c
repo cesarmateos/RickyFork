@@ -122,36 +122,6 @@ int localizarTablaArchivo(char* path){
 	return -1;
 }
 
-void conteos(){
-
-	uint32_t bloquesUso = 0;
-	uint32_t bloquesDisponibles = 0;
-	uint32_t primerBloqueDisponible = 0;
-	int tablasUso = 0;
-	int primerTablaVacia = 0;
-	int tablasDisponibles = 0;
-
-	bloquesDisponibles = contadorBloquesLibres();
-	Logger_Log(LOG_INFO, "Bloques para datos disponibles: %lu .", bloquesDisponibles);
-
-	bloquesUso = (int)bloquesDatos - bloquesDisponibles;
-	Logger_Log(LOG_INFO, "Bloques para datos en uso: %lu .", bloquesUso);
-
-	primerBloqueDisponible = buscarBloqueDisponible();
-	Logger_Log(LOG_INFO, "Primer bloque disponible : %lu .", primerBloqueDisponible);
-
-	tablasDisponibles = contadorTablasLibres();
-	Logger_Log(LOG_INFO, "Tablas disponibles: %d .", tablasDisponibles);
-
-	tablasUso = GFILEBYTABLE - tablasDisponibles;
-	Logger_Log(LOG_INFO, "Tablas en uso: %d .", tablasUso);
-
-	primerTablaVacia = buscarTablaDisponible();
-	Logger_Log(LOG_INFO, "Primer tabla disponible : %d", primerTablaVacia);
-
-}
-
-
 void sincronizarTabla(void){
 	msync(mapTablas,(GFILEBYTABLE * sizeof(GFile)),MS_SYNC);
 }

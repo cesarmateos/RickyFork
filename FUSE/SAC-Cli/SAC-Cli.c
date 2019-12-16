@@ -4,6 +4,8 @@ t_config* leer_config(void){
 		return config_create("fuse.config");
 }
 
+int socketConectado;
+
 static int sacGetAttr(const char *path, struct stat *stbuf){
 	printf( "[getattr] Called\n" );
 	printf( "\tAttributes of %s requested\n", path );
@@ -40,17 +42,35 @@ static int sacGetAttr(const char *path, struct stat *stbuf){
 
 static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
-	printf( "--> Getting The List of Files of %s\n", path );
+	printf( "Listado de archivos de %s\n", path );
 
-	filler( buffer, ".", NULL, 0 ); // Current Directory
-	filler( buffer, "..", NULL, 0 ); // Parent Directory
+	(void) offset;
+	(void) fi;
 
-	if ( strcmp( path, "/" ) == 0 ) // If the user is trying to show the files/directories of the root directory show the following
-	{
-		filler( buffer, "file54", NULL, 0 );
-		filler( buffer, "file349", NULL, 0 );
+	if (strcmp(path, "/") != 0)
+		return -ENOENT;
+
+	int tamanio = sizeof(parametrosLeerDirectorio);
+
+	parametrosLeerDirectorio* inicio = malloc(sizeof(parametrosLeerDirectorio));
+
+	*inicio->rutaDirectorio = *path;
+
+	int* error_status = NULL;
+	nombreArchivo* listaDeArchivos;
+
+	SocketCommons_SendHeader(socketConectado,tamanio, 1);
+	SocketCommons_SendData(socketConectado, 1, inicio, tamanio);
+	free(inicio);
+	*listaDeArchivos = SocketCommons_ReceiveData(socketConectado, 1, error_status);
+
+	int i = 0;
+
+	filler(buffer, ".", NULL, 0);
+	filler(buffer, "..", NULL, 0);
+	while((listaDeArchivos + i) != NULL){
+		filler(buffer, *(listaDeArchivos +i), NULL, 0);
 	}
-
 	return 0;
 }
 
@@ -118,9 +138,8 @@ static struct fuse_operations sacOperaciones = {
 int main(){
 
 	t_config* fuseConfig;
-	char* puerto;
 
-	int socketConectado;
+	char* puerto;
 
 	fuseConfig = leer_config();
 
@@ -128,7 +147,9 @@ int main(){
 
 	socketConectado = SocketClient_ConnectToServer(puerto);
 
-	SocketCommons_SendMessageString(socketConectado,"Ehaeha");
+	////
+
+	////
 
 	return 0;
 }

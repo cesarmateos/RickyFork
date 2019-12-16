@@ -30,7 +30,8 @@ void cargarAlmacenamiento(void){
 
 }
 
-void descargarAlmacenamiento(){
+void descargarAlmacenamiento(void){
+
 	conteos();
 	sincronizarTabla();
 	sincronizarBitArray();
@@ -91,7 +92,8 @@ void leerHead(void){
 	}
 }
 
-void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, int padre){
+void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, nroTabla padre){
+
 	nroTabla numeroTablaAUsar = 0;
 	GFile tabla;
 	ptrGBloque* arrayPunterosIndirectos = calloc(BLKINDIRECT,sizeof(ptrGBloque));
@@ -183,28 +185,6 @@ void borrarArchivo(char* path){
 	}
 }
 
-void crearDirectorio(char* nombre, int padre){
-	nroTabla numeroTablaAUsar = 0;
-	GFile tabla;
-	numeroTablaAUsar = buscarTablaDisponible();
-
-	if(numeroTablaAUsar == -1){
-		Logger_Log(LOG_ERROR, "No se pueden crear mas directorios.");
-	}else{
-		time_t fechaActual;
-		fechaActual = time(NULL);
-		tabla = devolverTabla(numeroTablaAUsar);
-
-		tabla.state = 2;
-		strcpy(tabla.fname,nombre);
-		tabla.tablaPadre = padre;
-		tabla.c_date = fechaActual;
-		tabla.m_date = fechaActual;
-	}
-	*(mapTablas +numeroTablaAUsar) = tabla;
-	Logger_Log(LOG_INFO, "Se creo el directorio: %s. en el bloque: %d, padre: %d", nombre,numeroTablaAUsar,padre);
-}
-
 void* leerArchivo(char* path){
 	nroTabla numeroTabla = 0;
 	numeroTabla = localizarTablaArchivo(path);
@@ -245,6 +225,28 @@ void* leerArchivo(char* path){
 		//free(datosTemporarios);
 		return datos;
 	}
+}
+
+void crearDirectorio(char* nombre, nroTabla padre){
+	nroTabla numeroTablaAUsar = 0;
+	GFile tabla;
+	numeroTablaAUsar = buscarTablaDisponible();
+
+	if(numeroTablaAUsar == -1){
+		Logger_Log(LOG_ERROR, "No se pueden crear mas directorios.");
+	}else{
+		time_t fechaActual;
+		fechaActual = time(NULL);
+		tabla = devolverTabla(numeroTablaAUsar);
+
+		tabla.state = 2;
+		strcpy(tabla.fname,nombre);
+		tabla.tablaPadre = padre;
+		tabla.c_date = fechaActual;
+		tabla.m_date = fechaActual;
+	}
+	*(mapTablas +numeroTablaAUsar) = tabla;
+	Logger_Log(LOG_INFO, "Se creo el directorio: %s. en el bloque: %d, padre: %d", nombre,numeroTablaAUsar,padre);
 }
 
 char** leerDirectorio(char* path){
@@ -297,6 +299,35 @@ int* encontrarPadres(char* nombre){
 		*padresProbables = -1;
 	}
 	return padresProbables;
+}
+
+void conteos(void){
+
+	uint32_t bloquesUso = 0;
+	uint32_t bloquesDisponibles = 0;
+	uint32_t primerBloqueDisponible = 0;
+	int tablasUso = 0;
+	int primerTablaVacia = 0;
+	int tablasDisponibles = 0;
+
+	bloquesDisponibles = contadorBloquesLibres();
+	Logger_Log(LOG_INFO, "Bloques para datos disponibles: %lu .", bloquesDisponibles);
+
+	bloquesUso = (int)bloquesDatos - bloquesDisponibles;
+	Logger_Log(LOG_INFO, "Bloques para datos en uso: %lu .", bloquesUso);
+
+	primerBloqueDisponible = buscarBloqueDisponible();
+	Logger_Log(LOG_INFO, "Primer bloque disponible : %lu .", primerBloqueDisponible);
+
+	tablasDisponibles = contadorTablasLibres();
+	Logger_Log(LOG_INFO, "Tablas disponibles: %d .", tablasDisponibles);
+
+	tablasUso = GFILEBYTABLE - tablasDisponibles;
+	Logger_Log(LOG_INFO, "Tablas en uso: %d .", tablasUso);
+
+	primerTablaVacia = buscarTablaDisponible();
+	Logger_Log(LOG_INFO, "Primer tabla disponible : %d", primerTablaVacia);
+
 }
 
 int main(){
