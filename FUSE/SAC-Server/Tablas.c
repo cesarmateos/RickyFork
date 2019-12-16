@@ -63,6 +63,95 @@ void crearPunterosIndirectosOLd(GFile *tabla, int cantidad){
 	free(arrayPunterosIndirectos);
 }
 
+
+int localizarTablaArchivo(char* path){
+	nroTabla numeroTablaPadre = 0;
+	size_t tamanio = strlen(path);
+	int tamanioSobrante = 0;
+	int tamanioExtracto = 0;
+	char* extracto;
+	char* sobrante = malloc(tamanio);
+	char* segmentoActual = malloc(GFILENAMELENGTH);
+	int caracter = '/';
+	char seg[GFILENAMELENGTH];
+	GFile tabla;
+
+	extracto = strrchr(path,caracter);								//Extraigo el nombre del archivo
+	tamanioExtracto =  strlen(extracto);							//Calculo el largo del nombre del archivo
+	tamanioSobrante = tamanio - tamanioExtracto;					//Calculo el largo del resto de la ruta
+	memcpy(segmentoActual,extracto,tamanioExtracto);
+	memcpy(sobrante, path, tamanioSobrante);						//Copio en sobrante el resto de la ruta.
+
+
+	for(nroTabla i = 0; i < GFILEBYTABLE ; i++){
+		numeroTablaPadre = i;
+		tabla = devolverTabla(numeroTablaPadre);
+		for(int z = 0 ; z < (tamanioExtracto -1) ; z++){
+			seg[z] = *(segmentoActual + z + 1 );
+		}
+			seg[tamanioExtracto -1] = '\0';
+
+		while(strcmp(tabla.fname , seg)  == 0 ){
+			*(sobrante + tamanioSobrante) = '\0';						//Pongo en sobrante el caracter nulo
+			*(segmentoActual + tamanioExtracto) = '\0';
+			numeroTablaPadre = tabla.tablaPadre;						//Asgino la tabla Padre al numero de tabla
+			if(tamanioSobrante == 0 && numeroTablaPadre == 0){
+				free(segmentoActual);
+				free(sobrante);
+				return i;
+			}else{
+				tabla = devolverTabla(numeroTablaPadre);
+				extracto = strrchr(sobrante,caracter);					//Extraigo el siguiente directorio de la ruta
+				tamanioExtracto =  strlen(extracto);					//Calculo el largo el nuevo extracto.
+				memcpy(segmentoActual,extracto,tamanioExtracto);
+				tamanioSobrante -= tamanioExtracto;						//Calculo el largo del resto de la ruta.
+				for(int z = 0 ; z < tamanioExtracto-1 ; z++){
+					seg[z] = *(segmentoActual + z + 1 );
+				}
+					seg[tamanioExtracto-1] = '\0';
+			}
+		}
+		extracto = strrchr(path,caracter);								//Extraigo el nombre del archivo
+		tamanioExtracto =  strlen(extracto);							//Calculo el largo del nombre del archivo
+		tamanioSobrante = tamanio - tamanioExtracto;					//Calculo el largo del resto de la ruta
+		memcpy(segmentoActual,extracto,tamanioExtracto);
+		memcpy(sobrante, path, tamanioSobrante);						//Copio en sobrante el resto de la ruta.
+	}
+	free(segmentoActual);
+	free(sobrante);
+	return -1;
+}
+
+void conteos(){
+
+	uint32_t bloquesUso = 0;
+	uint32_t bloquesDisponibles = 0;
+	uint32_t primerBloqueDisponible = 0;
+	int tablasUso = 0;
+	int primerTablaVacia = 0;
+	int tablasDisponibles = 0;
+
+	bloquesDisponibles = contadorBloquesLibres();
+	Logger_Log(LOG_INFO, "Bloques para datos disponibles: %lu .", bloquesDisponibles);
+
+	bloquesUso = (int)bloquesDatos - bloquesDisponibles;
+	Logger_Log(LOG_INFO, "Bloques para datos en uso: %lu .", bloquesUso);
+
+	primerBloqueDisponible = buscarBloqueDisponible();
+	Logger_Log(LOG_INFO, "Primer bloque disponible : %lu .", primerBloqueDisponible);
+
+	tablasDisponibles = contadorTablasLibres();
+	Logger_Log(LOG_INFO, "Tablas disponibles: %d .", tablasDisponibles);
+
+	tablasUso = GFILEBYTABLE - tablasDisponibles;
+	Logger_Log(LOG_INFO, "Tablas en uso: %d .", tablasUso);
+
+	primerTablaVacia = buscarTablaDisponible();
+	Logger_Log(LOG_INFO, "Primer tabla disponible : %d", primerTablaVacia);
+
+}
+
+
 void sincronizarTabla(void){
 	msync(mapTablas,(GFILEBYTABLE * sizeof(GFile)),MS_SYNC);
 }

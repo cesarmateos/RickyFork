@@ -11,31 +11,30 @@
 #define FUSE_USE_VERSION 26
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
-#include <math.h>
 #include <fuse.h>
 #include <unistd.h>
-
-
 
 #include "Estructuras.h"
 #include "Server.h"
 #include "Tablas.h"
-#include "Bloques.h"
 
+//#include "kemmens/CommandInterpreter.h"
 
 
 void cargarAlmacenamiento(void);
 void descargarAlmacenamiento();
 void leerHead(void);
 
-int localizarTablaArchivo(char* path);
 
 void archivoNuevo(char* nombre, void* datos, uint32_t tamanio, int padre);
+void borrarArchivo(char* path);
+
 void crearDirectorio(char* nombre, int padre);
-void borrarArchivo(void);
+char** leerDirectorio(char* path);
+
+void renombrar(char* path, char* nuevoNombre);
 
 void conteos();
 

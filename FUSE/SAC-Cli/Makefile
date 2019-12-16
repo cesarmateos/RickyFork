@@ -35,9 +35,6 @@ HEADERS = $(wildcard *.h)
 $(TARGET): $(OBJECTS) # Le pasamos a la tarea los objects ya compilados
 	$(CC) $(OBJECTS) $(CFLAGS) $(LIBS) -o $@ # Usamos el compilador para linkear los objects a las bibliotecas y tener nuestro binario
 
-#SAC-Cli: SAC-Cli.o
-#	$(CC) -o SAC-Cli SAC-Cli.o
-
 
 #clean: # Finalmente creamos una tarea para eliminar todos los .o y el binario
 	-rm -f *.o

@@ -77,7 +77,7 @@ void leerHead(void){
 	inicioTablas = 1 + (*bloquesBitmap);
 	Logger_Log(LOG_INFO, "Las tablas de Nodos inician en el bloque: %lu .", inicioTablas);
 
-	bloquesDatos = largoBitmap - 1025 - (*bloquesBitmap);
+	bloquesDatos = largoBitmap - 1025 - (uint32_t)(*bloquesBitmap);
 	Logger_Log(LOG_INFO, "Bloques para datos totales: %lu.", bloquesDatos);
 
 	mapearTablas();
@@ -90,8 +90,6 @@ void leerHead(void){
 	free(temporario);
 	}
 }
-
-
 
 void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, int padre){
 	nroTabla numeroTablaAUsar = 0;
@@ -173,10 +171,21 @@ void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, int padre){
 	//sincronizarBitArray();
 }
 
+void borrarArchivo(char* path){
+	nroTabla numeroTablaAUsar = 0;
+	GFile tabla;
+	numeroTablaAUsar = buscarTablaDisponible();
+	if(numeroTablaAUsar == -1){
+		Logger_Log(LOG_ERROR, "No se pueden crear mas directorios.");
+	}else{
+		tabla = devolverTabla(numeroTablaAUsar);
+		tabla.state = 0;
+	}
+}
+
 void crearDirectorio(char* nombre, int padre){
 	nroTabla numeroTablaAUsar = 0;
 	GFile tabla;
-
 	numeroTablaAUsar = buscarTablaDisponible();
 
 	if(numeroTablaAUsar == -1){
@@ -238,12 +247,33 @@ void* leerArchivo(char* path){
 	}
 }
 
+char** leerDirectorio(char* path){
+	nroTabla numeroTabla = 0;
+	numeroTabla = localizarTablaArchivo(path);
+	if(numeroTabla == -1){
+		Logger_Log(LOG_INFO, "No existe el directorio con la ruta: %s.", path);
+		return -1;
+	}else{
+		char** listadoDeArchivos = calloc(GFILEBYTABLE,sizeof(char*));
+		int j = 0;
+		for(int i = 0 ; i < GFILEBYTABLE ; i++){
+			if((mapTablas + i)->state !=0 && (mapTablas + i)->tablaPadre == numeroTabla){
+				//listadoDeArchivos[j] = calloc(GFILENAMELENGTH,sizeof(char));
+				*(listadoDeArchivos + j) = (mapTablas + i)->fname;
+				j++;
+			}
+		}
+		return listadoDeArchivos;
+
+	}
+}
+
 void renombrar(char* path, char* nuevoNombre){
 	nroTabla numeroTabla = 0;
 	numeroTabla = localizarTablaArchivo(path);
 	GFile tabla;
 	if(numeroTabla == -1){
-		Logger_Log(LOG_INFO, "No existe el archivo con la ruta: %s.", path);
+		Logger_Log(LOG_INFO, "No existe: %s.", path);
 	}else{
 		tabla = devolverTabla(numeroTabla);
 		strcpy(tabla.fname,nuevoNombre);
@@ -269,102 +299,16 @@ int* encontrarPadres(char* nombre){
 	return padresProbables;
 }
 
-int localizarTablaArchivo(char* path){
-	nroTabla numeroTablaPadre = 0;
-	size_t tamanio = strlen(path);
-	int tamanioSobrante = 0;
-	int tamanioExtracto = 0;
-	char* extracto;
-	char* sobrante = malloc(tamanio);
-	char* segmentoActual = malloc(GFILENAMELENGTH);
-	int caracter = '/';
-	char seg[GFILENAMELENGTH];
-	GFile tabla;
-
-	extracto = strrchr(path,caracter);								//Extraigo el nombre del archivo
-	tamanioExtracto =  strlen(extracto);							//Calculo el largo del nombre del archivo
-	tamanioSobrante = tamanio - tamanioExtracto;					//Calculo el largo del resto de la ruta
-	memcpy(segmentoActual,extracto,tamanioExtracto);
-	memcpy(sobrante, path, tamanioSobrante);						//Copio en sobrante el resto de la ruta.
-
-
-	for(nroTabla i = 0; i < GFILEBYTABLE ; i++){
-		numeroTablaPadre = i;
-		tabla = devolverTabla(numeroTablaPadre);
-		for(int z = 0 ; z < (tamanioExtracto -1) ; z++){
-			seg[z] = *(segmentoActual + z + 1 );
-		}
-			seg[tamanioExtracto -1] = '\0';
-
-		while(strcmp(tabla.fname , seg)  == 0 ){
-			*(sobrante + tamanioSobrante) = '\0';						//Pongo en sobrante el caracter nulo
-			*(segmentoActual + tamanioExtracto) = '\0';
-			numeroTablaPadre = tabla.tablaPadre;						//Asgino la tabla Padre al numero de tabla
-			if(tamanioSobrante == 0 && numeroTablaPadre == 0){
-				free(segmentoActual);
-				free(sobrante);
-				return i;
-			}else{
-				tabla = devolverTabla(numeroTablaPadre);
-				extracto = strrchr(sobrante,caracter);					//Extraigo el siguiente directorio de la ruta
-				tamanioExtracto =  strlen(extracto);					//Calculo el largo el nuevo extracto.
-				memcpy(segmentoActual,extracto,tamanioExtracto);
-				tamanioSobrante -= tamanioExtracto;						//Calculo el largo del resto de la ruta.
-				for(int z = 0 ; z < tamanioExtracto-1 ; z++){
-					seg[z] = *(segmentoActual + z + 1 );
-				}
-					seg[tamanioExtracto-1] = '\0';
-			}
-		}
-		extracto = strrchr(path,caracter);								//Extraigo el nombre del archivo
-		tamanioExtracto =  strlen(extracto);							//Calculo el largo del nombre del archivo
-		tamanioSobrante = tamanio - tamanioExtracto;					//Calculo el largo del resto de la ruta
-		memcpy(segmentoActual,extracto,tamanioExtracto);
-		memcpy(sobrante, path, tamanioSobrante);						//Copio en sobrante el resto de la ruta.
-	}
-	free(segmentoActual);
-	free(sobrante);
-	return -1;
-}
-
-void conteos(){
-
-	uint32_t bloquesUso = 0;
-	uint32_t bloquesDisponibles = 0;
-	uint32_t primerBloqueDisponible = 0;
-	int tablasUso = 0;
-	int primerTablaVacia = 0;
-	int tablasDisponibles = 0;
-
-	bloquesDisponibles = contadorBloquesLibres();
-	Logger_Log(LOG_INFO, "Bloques para datos disponibles: %lu .", bloquesDisponibles);
-
-	bloquesUso = (int)bloquesDatos - bloquesDisponibles;
-	Logger_Log(LOG_INFO, "Bloques para datos en uso: %lu .", bloquesUso);
-
-	primerBloqueDisponible = buscarBloqueDisponible();
-	Logger_Log(LOG_INFO, "Primer bloque disponible : %lu .", primerBloqueDisponible);
-
-	tablasDisponibles = contadorTablasLibres();
-	Logger_Log(LOG_INFO, "Tablas disponibles: %d .", tablasDisponibles);
-
-	tablasUso = GFILEBYTABLE - tablasDisponibles;
-	Logger_Log(LOG_INFO, "Tablas en uso: %d .", tablasUso);
-
-	primerTablaVacia = buscarTablaDisponible();
-	Logger_Log(LOG_INFO, "Primer tabla disponible : %d", primerTablaVacia);
-
-}
-
 int main(){
 
 	iniciarLog();
 
 	cargarAlmacenamiento();
 
+	/*
 	char* ruta = "/PrimerDirectorio/SegundoDirectorio/Prueba.txt";
 	char* ruta2 = "/PrimerDirectorio/SegundoDirectorio/TercerDirectorio/Prueba.txt";
-/*
+
 	char prueba[] = "ESTA ES UNA PRUEBA PARA VER SI ANDA EL NUEVO ARCHIVO";
 	char prueba2[] = "ARCHIVO DE PRUEBA 2 JAJAJJAJAJA RAJAJAJA POPO CUCUCU PIPIPI";
 
@@ -395,13 +339,22 @@ int main(){
 	char* datos;
 	datos = leerArchivo(ruta);
 	printf("El archivo %s dice: %s .\n", ruta, datos);
-*/
+
 	renombrar(ruta2, "Pajarito.jpg");
 
-	descargarAlmacenamiento();
+	char** lectura;
+	lectura = leerDirectorio("/PrimerDirectorio/SegundoDirectorio/TercerDirectorio");
 
-	//iniciarServer();
+	for(int i = 0 ; i < 2 ; i++){
+		printf("%s .\n",lectura[i]);
+	}
+	free(lectura);
+*/
+	//CommandInterpreter_Init();
+
+	iniciarServer();
 	//apagarServer();
+	//descargarAlmacenamiento();
 
 	return 0;
 }

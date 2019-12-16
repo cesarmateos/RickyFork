@@ -87,6 +87,18 @@ int sacUnlink(const char *path){
 	return 0;
 }
 
+int sacAbrirDirectorio(const char *dirName){
+	return 0;
+}
+
+int sacCerrarArchivo(){
+	return 0;
+}
+
+int sacCerrarDirectorio(){
+	return 0;
+}
+
 static struct fuse_operations sacOperaciones = {
 		.create = sacCrear,
 		.getattr = sacGetAttr,
@@ -97,14 +109,17 @@ static struct fuse_operations sacOperaciones = {
 		.readdir = sacLeerDir,
 		.mkdir = sacMkdir,
 		.rmdir = sacRmdir,
+		.opendir = sacAbrirDirectorio,
+		.release = sacCerrarArchivo,
+		.releasedir = sacCerrarDirectorio
 
 };
 
 int main(){
 
 	t_config* fuseConfig;
-
 	char* puerto;
+
 	int socketConectado;
 
 	fuseConfig = leer_config();

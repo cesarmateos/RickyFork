@@ -25,6 +25,8 @@
 
 #include <sys/mman.h>
 #include<inttypes.h>
+#include <stdlib.h>
+#include <math.h>
 
 
 typedef uint32_t ptrGBloque;
@@ -41,7 +43,7 @@ typedef struct sac_header_t { // un bloque
 typedef struct sac_file_t { // un cuarto de bloque (256 bytes)
         uint8_t state; // 0: borrado, 1: archivo, 2: directorio
         char fname[GFILENAMELENGTH];
-        int tablaPadre;
+        nroTabla tablaPadre;
         uint32_t file_size;
         uint64_t c_date;
         uint64_t m_date;
