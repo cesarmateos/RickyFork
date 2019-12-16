@@ -35,6 +35,8 @@ struct t_semaforo{
 };
 typedef struct t_semaforo T_semaforo;
 static sem_t sem;
+//estructuras a ser utilizadas en suse
+
 
 void iniciarServidor(){
 	SocketServer_Start("SUSE",3801);
@@ -44,7 +46,7 @@ void iniciarServidor(){
 void iniciarLog(void){
 	Logger_CreateLog("SUSE.log","SUSE",true);
 }
-
+//carga de los semaforos de suse
 t_list* cargarsemaforos(int size){
 	t_config* suseconfig = config_create("suse.config");
 	T_semaforo sem;
@@ -52,8 +54,10 @@ t_list* cargarsemaforos(int size){
 	char** identificadores = config_get_array_value(suseconfig,"SEM_IDS");
 	char** valoresiniciales = config_get_array_value(suseconfig,"SEM_INIT");
 	for(int i=0;i<size;i++){
-		sem.identificador = identificadores[i];
+		sem.identificador = *identificadores[i];
+		Logger_Log(LOG_INFO,"el identificador es %c\n",sem.identificador);
 		sem.valor = (*valoresiniciales[i]-'0');
+		Logger_Log(LOG_INFO,"el valor es %d\n",sem.valor);
 		list_add(listaDeSemaforos,&sem);
 	}
 	free(suseconfig);
@@ -61,6 +65,7 @@ t_list* cargarsemaforos(int size){
 	free(valoresiniciales);
 	return listaDeSemaforos;
 }
+//inicializacion de programa
 T_programa crearPrograma(int identificador){
 	T_programa programa;
 	programa.identificador = identificador;
@@ -71,18 +76,24 @@ T_programa crearPrograma(int identificador){
 void ejecutarHilo(T_programa* programa,T_hilo* hiloAejecutar){
 	programa->exec = hiloAejecutar;
 }
-
-void crearHilo(int identificador,double tiempoEstimado,t_list* new){
+//inicializacion de hilo
+T_hilo crearHilo(int identificador,int pid,double tiempoEstimado){
 	T_hilo hilo;
 	time_t tiempoactual;
 	time(&tiempoactual);
 	hilo.identificador = identificador;
+	hilo.pid=pid;
 	hilo.tiempoDeEjecucion = tiempoactual;
 	hilo.tiempoEstimado = tiempoEstimado;
 	hilo.tiempoReal = 0;
-	list_add(new,&hilo);
+	return hilo;
 }
-
+//se carga al estado new los hilos este estado compartidos por todos lo hilos de los programas desde este estado pasa al ready de cada programa
+void cargarhiloAnew(T_hilo* hilo,t_list* new){
+	list_add(new,hilo);
+	Logger_Log(LOG_INFO,"se cargo el hilo en new %d",hilo->identificador);
+}
+//devuelve el proximo hilo a ejecutar
 T_hilo* proximoHiloAejecutar(T_programa programa){
 	return list_get(programa.ready,0);
 }
@@ -95,10 +106,12 @@ bool sjf(T_hilo* hiloA,T_hilo* hiloB){
 	free(suseconfig);
 	return a < b;
 }
-
+//se carga un programa en la lisat de programas
 void CargarPrograma(T_programa* programa,t_list* lista){
 		list_add(lista,programa);
+		Logger_Log(LOG_INFO,"se cargo el programa %d",programa->identificador);
 }
+// pasaje de un hilo a esatdo de bloqueado se saca del esatdo exec y se pasa a bloqueado se calcula el tiempo que estuvo ejecutando para elc alculo del sjf
 void bloquearHilo(T_programa* programa,t_list* blockeado){
 	T_hilo* hiloBloqueado = programa->exec;
 	time_t tiemponuevo;
@@ -108,6 +121,7 @@ void bloquearHilo(T_programa* programa,t_list* blockeado){
 	programa->exec = NULL;
 	list_add(blockeado,hiloBloqueado);
 }
+//se elimina el hilo
 void eliminarHilo(T_programa* programa,int index){
 	list_remove(programa->ready,index);
 	sem_post(&sem);
@@ -119,12 +133,13 @@ T_programa* encontrarPrograma(int pid,t_list* lista){
 	}
 	return list_find(lista,(void*)buscarprograma);
 }
-
+//pasaje de los estados de new a ready de cada programa se utiliza un semaforo para que no haya espera activa
 void cargarhilos(t_list* new,t_list* listaProgramas){
 	while(list_size(new) != 0){
 		sem_wait(&sem);
 		T_hilo* hiloAagregar = list_remove(new,0);
 		T_programa* programa = encontrarPrograma(hiloAagregar->pid,listaProgramas);
+		Logger_Log(LOG_INFO,"se cargo el hilo %d en el programa %d\n",hiloAagregar->identificador,programa->identificador);
 		list_add(programa->ready,hiloAagregar);
 	}
 }
@@ -136,6 +151,7 @@ void removerhilo(int identificador,t_list* lista){
 	}
 	list_remove_by_condition(lista,(void*)buscarhilo);
 }
+//operacion signal de los semaforos de suse
 void incrementarSemaforo(T_semaforo* sem,T_hilo* hilo,t_list* bloqueado,t_list* listaProgramas){
 	sem->valor += 1;
 	if(sem->valor > 0){
@@ -144,7 +160,7 @@ void incrementarSemaforo(T_semaforo* sem,T_hilo* hilo,t_list* bloqueado,t_list* 
 		list_add(programa->ready,hilo);
 	}
 }
-
+//operacion wait de los semaforos de suse
 void decrementarSemaforo(T_semaforo* sem,T_hilo* hilo,t_list* bloqueado,t_list* listaProgramas){
 	sem->valor -= 1;
 	if(sem->valor <= 0){
@@ -164,19 +180,21 @@ int main() {
 	t_list* listaPrograma = list_create();
 	t_list* blockeados = list_create();
 	t_list* new = list_create();
-	/*char** identificadores = config_get_array_value(suseconfig,"SEM_IDS");
-	char* a = identificadores[0];
-	T_semaforo* ptr = list_get(lista,0);
-	Logger_Log(LOG_INFO,"se muestra el identificador %s\n",ptr->identificador);
-	Logger_Log(LOG_INFO,"se muestra el valor %d\n",ptr->valor);
-	T_hilo hiloA = crearHilo(1,3);
-	T_hilo hiloB = crearHilo(2,2);
-	T_hilo* ptr;
+	t_list* lista = cargarsemaforos(2);
+	T_programa programa = crearPrograma(1);
+	CargarPrograma(&programa,listaPrograma);
+	T_hilo hilo = crearHilo(0,1,3);
+	cargarhiloAnew(&hilo,new);
+	cargarhilos(new,listaPrograma);
+	//cargarhilos(new,listaPrograma);
+	/*T_hilo hiloA = crearHilo(1,3,3,new);
+	T_hilo hiloB = crearHilo(2,2,3,new);
+	T_hilo* ptr2;
 	list_add(listaPrograma,&hiloA);
 	list_add(listaPrograma,&hiloB);
 	list_sort(listaPrograma,sjf);
-	ptr = list_get(listaPrograma,0);
-	printf("el hilo mas chico es %d\n",ptr->identificador);*/
+	ptr2 = list_get(listaPrograma,0);
+	printf("el hilo mas chico es %d\n",ptr2->identificador);*/
 
 	return EXIT_SUCCESS;
 }
