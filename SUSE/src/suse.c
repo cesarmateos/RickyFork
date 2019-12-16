@@ -13,7 +13,6 @@
 #include<readline/readline.h>
 #include"kemmens/SocketServer.h"
 
-
 struct t_hilo{
 	int identificador;
 	int pid;//este es el identificador del programa vendria a ser el socket
@@ -35,8 +34,7 @@ struct t_semaforo{
 	int valor;
 };
 typedef struct t_semaforo T_semaforo;
-
-
+static sem_t sem;
 
 void iniciarServidor(){
 	SocketServer_Start("SUSE",3801);
@@ -47,6 +45,22 @@ void iniciarLog(void){
 	Logger_CreateLog("SUSE.log","SUSE",true);
 }
 
+t_list* cargarsemaforos(int size){
+	t_config* suseconfig = config_create("suse.config");
+	T_semaforo sem;
+	t_list* listaDeSemaforos = list_create();
+	char** identificadores = config_get_array_value(suseconfig,"SEM_IDS");
+	char** valoresiniciales = config_get_array_value(suseconfig,"SEM_INIT");
+	for(int i=0;i<size;i++){
+		sem.identificador = identificadores[i];
+		sem.valor = (*valoresiniciales[i]-'0');
+		list_add(listaDeSemaforos,&sem);
+	}
+	free(suseconfig);
+	free(identificadores);
+	free(valoresiniciales);
+	return listaDeSemaforos;
+}
 T_programa crearPrograma(int identificador){
 	T_programa programa;
 	programa.identificador = identificador;
@@ -83,11 +97,7 @@ bool sjf(T_hilo* hiloA,T_hilo* hiloB){
 }
 
 void CargarPrograma(T_programa* programa,t_list* lista){
-	/*t_config* suseconfig = config_create("suse.config");
-	int gradoDeMultiprogramacion = config_get_int_value(suseconfig,"MAX_MULTIPROG");
-	if(list_size(lista) < gradoDeMultiprogramacion)
 		list_add(lista,programa);
-	free(suseconfig);*/
 }
 void bloquearHilo(T_programa* programa,t_list* blockeado){
 	T_hilo* hiloBloqueado = programa->exec;
@@ -100,7 +110,7 @@ void bloquearHilo(T_programa* programa,t_list* blockeado){
 }
 void eliminarHilo(T_programa* programa,int index){
 	list_remove(programa->ready,index);
-	//semaforo signal
+	sem_post(&sem);
 }
 T_programa* encontrarPrograma(int pid,t_list* lista){
 	int buscarprograma(T_programa* programa){
@@ -112,7 +122,7 @@ T_programa* encontrarPrograma(int pid,t_list* lista){
 
 void cargarhilos(t_list* new,t_list* listaProgramas){
 	while(list_size(new) != 0){
-		//semaforowait
+		sem_wait(&sem);
 		T_hilo* hiloAagregar = list_remove(new,0);
 		T_programa* programa = encontrarPrograma(hiloAagregar->pid,listaProgramas);
 		list_add(programa->ready,hiloAagregar);
@@ -144,19 +154,22 @@ void decrementarSemaforo(T_semaforo* sem,T_hilo* hilo,t_list* bloqueado,t_list* 
 	}
 }
 
+
+
 int main() {
 	iniciarLog();
+	t_config* suseconfig = config_create("suse.config");
+	int nivelDeMultiprogramacion = config_get_int_value(suseconfig,"MAX_MULTIPROG");
+	sem_init(&sem,1,nivelDeMultiprogramacion);
 	t_list* listaPrograma = list_create();
 	t_list* blockeados = list_create();
 	t_list* new = list_create();
-	t_config* suseconfig = config_create("suse.config");
-	char** valores = config_get_array_value(suseconfig,"SEM_IDS");
-	char** valores2 = config_get_array_value(suseconfig,"SEM_INIT");
-	char** a = valores[1];
-	char** b = valores2[0];
-	Logger_Log(LOG_INFO,"se muestra el identificador %s\n",a);
-	Logger_Log(LOG_INFO,"se muestra el identificador %s\n",(int)b);
-	/*T_hilo hiloA = crearHilo(1,3);
+	/*char** identificadores = config_get_array_value(suseconfig,"SEM_IDS");
+	char* a = identificadores[0];
+	T_semaforo* ptr = list_get(lista,0);
+	Logger_Log(LOG_INFO,"se muestra el identificador %s\n",ptr->identificador);
+	Logger_Log(LOG_INFO,"se muestra el valor %d\n",ptr->valor);
+	T_hilo hiloA = crearHilo(1,3);
 	T_hilo hiloB = crearHilo(2,2);
 	T_hilo* ptr;
 	list_add(listaPrograma,&hiloA);
