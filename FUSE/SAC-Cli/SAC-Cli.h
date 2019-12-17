@@ -7,6 +7,7 @@
 #include <readline/readline.h>
 #include <time.h>
 #include <fuse.h>
+//#include <fuse_opt.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,11 +29,31 @@ int sacEscribir (const char path, const char data, size_t size, off_t offset, st
 int sacUnlink(const char *path);
 int sacAbrirDirectorio(const char *dirName);
 
+struct t_runtime_options {
+	char* welcome_msg;
+} runtime_options;
+
+#define CUSTOM_FUSE_OPT_KEY(t, p, v) { t, offsetof(struct t_runtime_options, p), v }
+
+
+enum {
+	KEY_VERSION,
+	KEY_HELP,
+};
+
+
 /*
- Tipos Mensajes :
-
- 1-Leer Directorio
- 2-Crear Directorio
- 3-Borrar Directorio
-
+ * Esta estructura es utilizada para decirle a la biblioteca de FUSE que
+ * parametro puede recibir y donde tiene que guardar el valor de estos
  */
+static struct fuse_opt fuse_options[] = {
+		// Este es un parametro definido por nosotros
+		CUSTOM_FUSE_OPT_KEY("--welcome-msg %s", welcome_msg, 0),
+
+		// Estos son parametros por defecto que ya tiene FUSE
+		FUSE_OPT_KEY("-V", KEY_VERSION),
+		FUSE_OPT_KEY("--version", KEY_VERSION),
+		FUSE_OPT_KEY("-h", KEY_HELP),
+		FUSE_OPT_KEY("--help", KEY_HELP),
+		FUSE_OPT_END,
+};

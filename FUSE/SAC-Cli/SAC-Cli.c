@@ -62,7 +62,7 @@ static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 	SocketCommons_SendHeader(socketConectado,tamanio, 1);
 	SocketCommons_SendData(socketConectado, 1, inicio, tamanio);
 	free(inicio);
-	*listaDeArchivos = SocketCommons_ReceiveData(socketConectado, 1, error_status);
+	listaDeArchivos = SocketCommons_ReceiveData(socketConectado, 1, error_status);
 
 	int i = 0;
 
@@ -74,9 +74,38 @@ static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 	return 0;
 }
 
+int sacMkdir(const char *path, mode_t mode){
+
+	int tamanio = sizeof(parametrosLeerDirectorio);
+	parametrosLeerDirectorio* inicio = malloc(sizeof(parametrosLeerDirectorio));
+	*inicio->rutaDirectorio = *path;
+
+	int* error_status = NULL;
+	SocketCommons_SendHeader(socketConectado,tamanio, 2);
+	SocketCommons_SendData(socketConectado, 2, inicio, tamanio);
+	free(inicio);
+
+	return 0;
+}
+
+int sacRmdir(const char *path){
+
+	int tamanio = sizeof(parametrosLeerDirectorio);
+	parametrosLeerDirectorio* inicio = malloc(sizeof(parametrosLeerDirectorio));
+	*inicio->rutaDirectorio = *path;
+
+	int* error_status = NULL;
+	SocketCommons_SendHeader(socketConectado,tamanio, 3);
+	SocketCommons_SendData(socketConectado, 3, inicio, tamanio);
+	free(inicio);
+
+	return 0;
+}
+
 static int sacAbrir(const char *path, struct fuse_file_info *fi) {
 	return 0;
 }
+
 
 static int sacLeer(const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *fi) {
 	printf( "--> Trying to read %s, %u, %u\n", path, offset, size );
@@ -85,13 +114,7 @@ static int sacLeer(const char *path, char *buffer, size_t size, off_t offset, st
 	//memcpy( buffer, selectedText + offset, size );
 
 	//return strlen( selectedText ) - offset;
-}
 
-int sacMkdir(const char *path, mode_t mode){
-	return 0;
-}
-
-int sacRmdir(const char *path){
 	return 0;
 }
 
@@ -135,7 +158,7 @@ static struct fuse_operations sacOperaciones = {
 
 };
 
-int main(){
+int main(int argc, char *argv[]) {
 
 	t_config* fuseConfig;
 
@@ -147,9 +170,29 @@ int main(){
 
 	socketConectado = SocketClient_ConnectToServer(puerto);
 
-	////
+	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
-	////
+	// Limpio la estructura que va a contener los parametros
+	memset(&runtime_options, 0, sizeof(struct t_runtime_options));
+
+	// Esta funcion de FUSE lee los parametros recibidos y los intepreta
+	if (fuse_opt_parse(&args, &runtime_options, fuse_options, NULL) == -1){
+		/** error parsing options */
+		perror("Invalid arguments!");
+		return EXIT_FAILURE;
+	}
+
+	// Si se paso el parametro --welcome-msg
+	// el campo welcome_msg deberia tener el
+	// valor pasado
+	if( runtime_options.welcome_msg != NULL ){
+		printf("%s\n", runtime_options.welcome_msg);
+	}
+
+	// Esta es la funcion principal de FUSE, es la que se encarga
+	// de realizar el montaje, comuniscarse con el kernel, delegar todo
+	// en varios threads
+	return fuse_main(args.argc, args.argv, &sacOperaciones, NULL);
 
 	return 0;
 }
