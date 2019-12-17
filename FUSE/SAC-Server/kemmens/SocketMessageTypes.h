@@ -1,12 +1,15 @@
-#ifndef KEMMENS_SOCKETMESSAGETYPES_H_
-#define KEMMENS_SOCKETMESSAGETYPES_H_
+#ifndef SOCKETMESSAGETYPES_H_
+#define SOCKETMESSAGETYPES_H_
 
 /*	Definicion de tipos de mensajes para transferencias de datos por TCPIP
  */
 
 //Message Types
 
-#define MESSAGETYPE_STRING 1	//Strings puras
+#define  LEERDIR 1
+#define  CREARDIR 2
+#define  BORRARDIR 3
+#define  CREARFILE 4
+#define  BORRARFILE 5
 
-
-#endif /* KEMMENS_SOCKETMESSAGETYPES_H_ */
+#endif /* SOCKETMESSAGETYPES_H_ */

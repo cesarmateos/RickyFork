@@ -7,7 +7,6 @@
 #include <readline/readline.h>
 #include <time.h>
 #include <fuse.h>
-//#include <fuse_opt.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +16,7 @@
 #include <fcntl.h>
 #include "Estructuras.h"
 
+char* puerto;
 
 static int sacGetAttr(const char *path, struct stat *stbuf);
 static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);

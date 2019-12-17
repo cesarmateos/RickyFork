@@ -7,12 +7,12 @@ ContentHeader* SocketCommons_CreateHeader()
 {
 	return (ContentHeader*)malloc(sizeof(ContentHeader));
 }
-
+/*
 int SocketCommons_SendMessageString(int socket, char* message)
 {
 	return SocketCommons_SendStringAsContent(socket, message, MESSAGETYPE_STRING);
 }
-
+*/
 int SocketCommons_SendStringAsContent(int socket, char* string, int content_type)
 {
 	int leng = string_length(string) + 1;

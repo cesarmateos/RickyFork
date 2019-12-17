@@ -76,14 +76,16 @@ static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 
 int sacMkdir(const char *path, mode_t mode){
 
+	socketConectado = SocketClient_ConnectToServer(puerto);
 	int tamanio = sizeof(parametrosLeerDirectorio);
 	parametrosLeerDirectorio* inicio = malloc(sizeof(parametrosLeerDirectorio));
-	*inicio->rutaDirectorio = *path;
+	memcpy(inicio->rutaDirectorio,path, 50);
 
-	int* error_status = NULL;
 	SocketCommons_SendHeader(socketConectado,tamanio, 2);
 	SocketCommons_SendData(socketConectado, 2, inicio, tamanio);
 	free(inicio);
+
+	SocketCommons_CloseSocket(socketConectado);
 
 	return 0;
 }
@@ -158,18 +160,22 @@ static struct fuse_operations sacOperaciones = {
 
 };
 
+void iniciarLog(void){
+	Logger_CreateLog("SAC.log","SAC-Cliente",true);
+}
+
 int main(int argc, char *argv[]) {
 
-	t_config* fuseConfig;
+	iniciarLog();
 
-	char* puerto;
+	t_config* fuseConfig;
 
 	fuseConfig = leer_config();
 
 	puerto = config_get_string_value(fuseConfig, "LISTEN_PORT");
 
-	socketConectado = SocketClient_ConnectToServer(puerto);
 
+/*
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
 	// Limpio la estructura que va a contener los parametros
@@ -177,7 +183,7 @@ int main(int argc, char *argv[]) {
 
 	// Esta funcion de FUSE lee los parametros recibidos y los intepreta
 	if (fuse_opt_parse(&args, &runtime_options, fuse_options, NULL) == -1){
-		/** error parsing options */
+		// error parsing options //
 		perror("Invalid arguments!");
 		return EXIT_FAILURE;
 	}
@@ -193,6 +199,10 @@ int main(int argc, char *argv[]) {
 	// de realizar el montaje, comuniscarse con el kernel, delegar todo
 	// en varios threads
 	return fuse_main(args.argc, args.argv, &sacOperaciones, NULL);
+*/
+	int algo;
+	char* ruta = "/PrimerDirectorio/SegundoDirectorio/TercerDirectorio/PasaPorElSocketPorFavor.txt";
+	algo = sacMkdir(ruta, S_IFDIR);
 
 	return 0;
 }

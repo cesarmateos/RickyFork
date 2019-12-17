@@ -130,7 +130,7 @@ void SocketCommons_CloseSocket(int socketFD)
     	 Logger_Log(LOG_ERROR, "No se pudo cerrar el socket descripto por %d", socketFD);
     	 return;
      }
-     Logger_Log(LOG_ERROR, "Socket descripto por %d cerrado, fin de la conexion a traves de el", socketFD);
+     Logger_Log(LOG_ERROR, "Socket descripto por %d cerrado, fin de la conexion a traves de él", socketFD);
      return;
  }
 
