@@ -24,6 +24,7 @@ typedef struct t_hilo T_hilo;
 
 struct t_programa{
 	int identificador;//numero de socket;
+	int numeroDePrograma;
 	t_list* ready;
 	T_hilo* exec;
 };
@@ -37,7 +38,7 @@ typedef struct t_semaforo T_semaforo;
 static sem_t sem;
 //estructuras a ser utilizadas en suse
 
-
+static int i =0;
 void iniciarServidor(){
 	SocketServer_Start("SUSE",3801);
 	SocketServer_ActionsListeners evento;
@@ -66,9 +67,10 @@ t_list* cargarsemaforos(int size){
 	return listaDeSemaforos;
 }
 //inicializacion de programa
-T_programa crearPrograma(int identificador){
+T_programa crearPrograma(int identificador,int numerodeprograma){
 	T_programa programa;
 	programa.identificador = identificador;
+	programa.numeroDePrograma = numerodeprograma;
 	programa.ready = list_create();
 	return programa;
 }
@@ -111,13 +113,12 @@ void CargarPrograma(T_programa* programa,t_list* lista){
 		list_add(lista,programa);
 		Logger_Log(LOG_INFO,"se cargo el programa %d",programa->identificador);
 }
-// pasaje de un hilo a esatdo de bloqueado se saca del esatdo exec y se pasa a bloqueado se calcula el tiempo que estuvo ejecutando para elc alculo del sjf
+// pasaje de un hilo a estado de bloqueado se saca del estado exec y se pasa a bloqueado se calcula el tiempo que estuvo ejecutando para elc alculo del sjf
 void bloquearHilo(T_programa* programa,t_list* blockeado){
 	T_hilo* hiloBloqueado = programa->exec;
 	time_t tiemponuevo;
 	time(&tiemponuevo);
 	hiloBloqueado->tiempoReal = difftime(tiemponuevo,hiloBloqueado->tiempoDeEjecucion);
-	hiloBloqueado->tiempoDeEjecucion = tiemponuevo;
 	programa->exec = NULL;
 	list_add(blockeado,hiloBloqueado);
 }
@@ -156,8 +157,12 @@ void incrementarSemaforo(T_semaforo* sem,T_hilo* hilo,t_list* bloqueado,t_list* 
 	sem->valor += 1;
 	if(sem->valor > 0){
 		removerhilo(hilo->identificador,bloqueado);
+		time_t tiemponuevo;
+		time(&tiemponuevo);
+		hilo->tiempoDeEjecucion = tiemponuevo;
 		T_programa* programa= encontrarPrograma(hilo->pid,listaProgramas);
 		list_add(programa->ready,hilo);
+		list_sort(programa->ready,sjf);
 	}
 }
 //operacion wait de los semaforos de suse
@@ -174,6 +179,7 @@ void decrementarSemaforo(T_semaforo* sem,T_hilo* hilo,t_list* bloqueado,t_list* 
 
 int main() {
 	iniciarLog();
+	int messageType;
 	t_config* suseconfig = config_create("suse.config");
 	int nivelDeMultiprogramacion = config_get_int_value(suseconfig,"MAX_MULTIPROG");
 	sem_init(&sem,1,nivelDeMultiprogramacion);
@@ -181,13 +187,58 @@ int main() {
 	t_list* blockeados = list_create();
 	t_list* new = list_create();
 	t_list* lista = cargarsemaforos(2);
-	T_programa programa = crearPrograma(1);
+	iniciarServidor();
+	switch(messageType){
+		case 1:
+		{
+			//T_programa programa = crearPrograma(socket,i);
+			//CargarPrograma(&programa,listaPrograma);
+			break;
+		}
+		case 2:
+		{
+			//T_hilo hilo = crearHilo(0,socket,0);
+			//cargarhiloAnew(&hilo,new);
+			//cargarhilos(new,listaPrograma);
+			break;
+		}
+		case 3:
+		{
+			//proximohiloAejecutar()
+			break;
+		}
+		case 4:
+		{
+			//incrementarsemaforo
+			break;
+		}
+		case 5:
+		{
+			//decrementarsemaforo
+			break;
+		}
+		case 6:
+		{
+			//bloquearhilo
+			break;
+		}
+		case 7:
+		{
+			//eliminarhilo
+			break;
+		}
+		}
+    /*T_programa programa = crearPrograma(1);
+	T_programa programa2 = crearPrograma(2);
 	CargarPrograma(&programa,listaPrograma);
+	CargarPrograma(&programa2,listaPrograma);
 	T_hilo hilo = crearHilo(0,1,3);
+	T_hilo hilo2 = crearHilo(0,2,3);
 	cargarhiloAnew(&hilo,new);
+	cargarhiloAnew(&hilo2,new);
 	cargarhilos(new,listaPrograma);
 	//cargarhilos(new,listaPrograma);
-	/*T_hilo hiloA = crearHilo(1,3,3,new);
+	T_hilo hiloA = crearHilo(1,3,3,new);
 	T_hilo hiloB = crearHilo(2,2,3,new);
 	T_hilo* ptr2;
 	list_add(listaPrograma,&hiloA);
