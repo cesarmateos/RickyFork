@@ -129,6 +129,13 @@ T_programa* encontrarPrograma(int pid,t_list* lista){
 	}
 	return list_find(lista,(void*)buscarprograma);
 }
+T_hilo* encontrarHilo(int tid,t_list* lista){
+	int buscarhilo(T_hilo* hilo){
+		if(hilo->identificador == tid)
+			return 1;
+	}
+	return list_find(lista,(void*)buscarhilo);
+}
 //pasaje de los estados de new a ready de cada programa se utiliza un semaforo para que no haya espera activa
 void cargarhilos(t_list* new,t_list* listaProgramas){
 	while(list_size(new) != 0){
@@ -171,7 +178,7 @@ void decrementarSemaforo(T_semaforo* sem,T_hilo* hilo,t_list* bloqueado,t_list* 
 }
 
 void alrecibirPaquete(int socketID, int messageType, void* actualData){
-	t_list* listaPrograma = list_create();
+	t_list* listaProgramas = list_create();
 	t_list* blockeados = list_create();
 	t_list* new = list_create();
 	t_list* lista = cargarsemaforos(2);
@@ -179,7 +186,7 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	case INICIAR:
 	{
 		T_programa programa = crearPrograma(socketID,i);
-		CargarPrograma(&programa,listaPrograma);
+		CargarPrograma(&programa,listaProgramas);
 		i++;
 		break;
 	}
@@ -187,12 +194,12 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	{
 		T_hilo hilo = crearHilo(actualData,socketID,0);
 		cargarhiloAnew(&hilo,new);
-		cargarhilos(new,listaPrograma);
+		cargarhilos(new,listaProgramas);
 		break;
 	}
 	case PROXIMOHILOAEJECUTAR:
 	{
-		T_programa* programa = encontrarPrograma(socketID,listaPrograma);
+		T_programa* programa = encontrarPrograma(socketID,listaProgramas);
 		T_hilo* hilo =proximoHiloAejecutar(programa);
 		break;
 	}
@@ -206,8 +213,9 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	}
 	case BLOQUEAR:
 	{
-		T_programa* programa = encontrarPrograma(socketID,listaPrograma);
-		bloquearHilo(programa,blockeados);
+		T_programa* programa = encontrarPrograma(socketID,listaProgramas);
+		T_hilo* hilo = encontrarHilo(actualData,programa->ready);
+		list_add(blockeados,hilo);
 	}
 	case ELIMINAR:
 	{
@@ -224,7 +232,6 @@ void iniciarServidor(){
 
 int main() {
 	iniciarLog();
-	int messageType;
 	t_config* suseconfig = config_create("suse.config");
 	int nivelDeMultiprogramacion = config_get_int_value(suseconfig,"MAX_MULTIPROG");
 	sem_init(&sem,1,nivelDeMultiprogramacion);
