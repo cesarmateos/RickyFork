@@ -1,17 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <time.h>
-#include <semaphore.h>
-#include<commons/log.h>
-#include<commons/string.h>
-#include<commons/bitarray.h>
-#include<commons/config.h>
-#include"kemmens/logger.h"
-#include<commons/collections/list.h>
-#include<commons/temporal.h>
-#include<readline/readline.h>
-#include"kemmens/SocketServer.h"
+#include "suse.h"
 
 struct t_hilo{
 	int identificador;
@@ -188,7 +175,7 @@ int main() {
 	t_list* new = list_create();
 	t_list* lista = cargarsemaforos(2);
 	iniciarServidor();
-	switch(messageType){
+	/*switch(messageType){
 		case 1:
 		{
 			//T_programa programa = crearPrograma(socket,i);
@@ -228,7 +215,7 @@ int main() {
 			break;
 		}
 		}
-    /*T_programa programa = crearPrograma(1);
+    T_programa programa = crearPrograma(1);
 	T_programa programa2 = crearPrograma(2);
 	CargarPrograma(&programa,listaPrograma);
 	CargarPrograma(&programa2,listaPrograma);
