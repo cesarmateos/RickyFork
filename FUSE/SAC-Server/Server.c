@@ -8,10 +8,12 @@ void iniciarLog(void){
 	Logger_CreateLog("SAC.log","SAC-Server",true);
 }
 
-
-
 void apagarServer(void){
 	SocketServer_TerminateAllConnections();
+}
+
+void alRecibirConexion(int socketID){
+	printf("Conexion entrante en %d \n",socketID);
 }
 
 void alRecibirPaquete(int socketID, int messageType, void* actualData){
@@ -22,24 +24,25 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 			char** ls = malloc(sizeof(rutaArchivo));
 			ls = leerDirectorio(actualData);
 			printf("Se leyó el directorio %s :", ls);
-			free(ls);
 			break;
 		}
 		case CREARDIR:
 		{
-			printf("Entro la siguiente data : %s  ", actualData);
-			/*
 			char* nombre = malloc(sizeof(GFILENAMELENGTH));
-			nroTabla padre;
+			char* sobrante;
+			nroTabla padre = 0;
 			int caracter = '/';
-			int tamanio = strlen(actualData);
-			char* directorioPadre = malloc(sizeof(tamanio));
-			padre = localizarTablaArchivo(directorioPadre);
-			nombre = strrchr(actualData,caracter);
+			int largoNombre = 0;
+			int largoSobrante = 0;
+
+			nombre = strrchr(((parametrosLeerDirectorio*)actualData)->rutaDirectorio,caracter);
+			largoNombre = strlen(nombre);
+			largoSobrante = ((parametrosLeerDirectorio*)actualData)->largoRuta - largoNombre;
+			strncpy(sobrante,((parametrosLeerDirectorio*)actualData)->rutaDirectorio, largoSobrante);
+			padre = localizarTablaArchivo(sobrante);
 			crearDirectorio( (nombre+1) ,padre);
 			free(nombre);
-			free(directorioPadre);
-			*/
+
 			break;
 		}
 		case BORRARDIR:
@@ -71,6 +74,8 @@ void iniciarServer(void){
 	SocketServer_Start("SAC",puerto);
 
 	SocketServer_ActionsListeners* evento = malloc(sizeof(SocketServer_ActionsListeners));
+
+	evento->OnClientConnected = alRecibirConexion;
 
 	evento->OnPacketArrived = alRecibirPaquete;
 

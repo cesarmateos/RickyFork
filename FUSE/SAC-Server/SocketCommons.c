@@ -81,7 +81,7 @@ void* SocketCommons_ReceiveData(int socket, int* message_type, int* error_status
 	*message_type = header->message_type;
 	free(header);
 
-	Logger_Log(LOG_DEBUG, "KEMMENSLIB::SOCKETCOMMONS->SocketCommons_ReceiveData - Recibiendo datos, length: %d, content type: %d", len, *message_type);
+	Logger_Log(LOG_DEBUG, "ReceiveData - Recibiendo datos, length: %d, content type: %d", len, *message_type);
 
 	return SocketCommons_ReceiveDataWithoutHeader(socket, len, error_status);
 }

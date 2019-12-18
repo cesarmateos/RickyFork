@@ -50,11 +50,11 @@ static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 	if (strcmp(path, "/") != 0)
 		return -ENOENT;
 
-	int tamanio = sizeof(parametrosLeerDirectorio);
+	int tamanio = sizeof(rutaArchivo);
 
-	parametrosLeerDirectorio* inicio = malloc(sizeof(parametrosLeerDirectorio));
+	rutaArchivo* inicio = malloc(sizeof(rutaArchivo));
 
-	*inicio->rutaDirectorio = *path;
+	//*inicio = *path;
 
 	int* error_status = NULL;
 	nombreArchivo* listaDeArchivos;
@@ -77,30 +77,29 @@ static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 int sacMkdir(const char *path, mode_t mode){
 
 	socketConectado = SocketClient_ConnectToServer(puerto);
-	int tamanio = sizeof(parametrosLeerDirectorio);
+	int tamanio = strlen(path);
 	parametrosLeerDirectorio* inicio = malloc(sizeof(parametrosLeerDirectorio));
-	memcpy(inicio->rutaDirectorio,path, 50);
-
-	SocketCommons_SendHeader(socketConectado,tamanio, 2);
-	SocketCommons_SendData(socketConectado, 2, inicio, tamanio);
+	memcpy(inicio->rutaDirectorio,path, tamanio);
+	inicio->largoRuta = tamanio;
+	SocketCommons_SendData(socketConectado, 2, inicio, sizeof(parametrosLeerDirectorio));
 	free(inicio);
 
-	SocketCommons_CloseSocket(socketConectado);
+	//SocketCommons_CloseSocket(socketConectado);
 
 	return 0;
 }
 
 int sacRmdir(const char *path){
-
-	int tamanio = sizeof(parametrosLeerDirectorio);
-	parametrosLeerDirectorio* inicio = malloc(sizeof(parametrosLeerDirectorio));
-	*inicio->rutaDirectorio = *path;
+/*
+	int tamanio = sizeof(rutaArchivo);
+	rutaArchivo* inicio = malloc(sizeof(rutaArchivo));
+	*inicio = *path;
 
 	int* error_status = NULL;
 	SocketCommons_SendHeader(socketConectado,tamanio, 3);
 	SocketCommons_SendData(socketConectado, 3, inicio, tamanio);
 	free(inicio);
-
+*/
 	return 0;
 }
 
@@ -203,6 +202,8 @@ int main(int argc, char *argv[]) {
 	int algo;
 	char* ruta = "/PrimerDirectorio/SegundoDirectorio/TercerDirectorio/PasaPorElSocketPorFavor.txt";
 	algo = sacMkdir(ruta, S_IFDIR);
+
+	config_destroy(fuseConfig);
 
 	return 0;
 }

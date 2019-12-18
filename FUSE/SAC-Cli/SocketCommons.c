@@ -62,7 +62,7 @@ void* SocketCommons_ReceiveData(int socket, int* message_type, int* error_status
 {
 	if(message_type == NULL)
 	{
-		Logger_Log(LOG_ERROR, "KEMMENSLIB::SOCKETCOMMONS->SocketCommons_ReceiveData - se recibio NULL en el parametro int* message_type. Se esperaba una direccion de memoria valida.");
+		Logger_Log(LOG_ERROR, "ReceiveData - Se recibio NULL en el parametro int* message_type. Se esperaba una direccion de memoria valida.");
 		return NULL;
 	}
 
@@ -76,7 +76,7 @@ void* SocketCommons_ReceiveData(int socket, int* message_type, int* error_status
 	*message_type = header->message_type;
 	free(header);
 
-	Logger_Log(LOG_DEBUG, "KEMMENSLIB::SOCKETCOMMONS->SocketCommons_ReceiveData - Recibiendo datos, length: %d, content type: %d", len, *message_type);
+	Logger_Log(LOG_DEBUG, "ReceiveData - Recibiendo datos, length: %d, content type: %d", len, message_type);
 
 	return SocketCommons_ReceiveDataWithoutHeader(socket, len, error_status);
 }
