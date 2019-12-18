@@ -23,14 +23,23 @@
 #include<readline/readline.h>
 #include<commons/log.h>
 
-#include <sys/mman.h>
-#include<inttypes.h>
+#include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <inttypes.h>
 #include <math.h>
+#include <time.h>
+#include <fuse.h>
+#include <sys/mman.h>
 
+#include"kemmens/logger.h"
 
 typedef uint32_t ptrGBloque;
 typedef int nroTabla;
+typedef char nombreArchivo[GFILENAMELENGTH];
+typedef char rutaArchivo[GFILENAMELENGTH*100];
 
 typedef struct sac_header_t { // un bloque
         char sac[3];
@@ -49,6 +58,10 @@ typedef struct sac_file_t { // un cuarto de bloque (256 bytes)
         uint64_t m_date;
         ptrGBloque blk_indirect[BLKINDIRECT];
 } GFile;
+
+typedef struct{
+	rutaArchivo rutaDirectorio;
+}parametrosLeerDirectorio;
 
 uint32_t *bloquesDatos;
 uint32_t largoBitmap;

@@ -1,97 +1,5 @@
 #include"SAC.h"
 
-
-void cargarAlmacenamiento(void){
-
-	t_config* fuseConfig;
-	char* nombreHD;
-
-	fuseConfig = leer_config();
-	nombreHD = config_get_string_value(fuseConfig, "DISCO");
-	disco = open(nombreHD, O_RDWR);
-
-	if (!disco) {
-		Logger_Log(LOG_ERROR, "Error al abrir el disco %s.", nombreHD);
-	} else {
-		off_t inicioArchivo;
-		off_t finArchivo;
-
-		inicioArchivo = lseek(disco, 0, SEEK_SET);
-		finArchivo = lseek(disco, 0, SEEK_END);
-		largoAlmacenamiento = finArchivo - inicioArchivo;
-		lseek(disco, 0, SEEK_SET);
-
-		Logger_Log(LOG_INFO, "Disco %s cargado exitosamente. Contiene %d bytes.", nombreHD, largoAlmacenamiento);
-
-		config_destroy(fuseConfig);
-
-		leerHead();
-	}
-
-}
-
-void descargarAlmacenamiento(void){
-
-	conteos();
-	sincronizarTabla();
-	sincronizarBitArray();
-	free(bloquesBitmap);
-	munmap(mapBitmap, largoBitmap);
-	munmap(mapTablas,sizeof(GFile) * GFILEBYTABLE);
-	free(inicioBitmap);
-	bitarray_destroy(mapBitmap);
-	close(disco);
-	Logger_Log(LOG_INFO, "Se ha descargado el Almacenamiento");
-}
-
-void leerHead(void){
-
-	if(disco == NULL){
-		Logger_Log(LOG_INFO, "No se pudo leer el head, no hay almacenamiento cargado.");
-	}else{
-
-	void* temporario = malloc(BLOCKSIZE);
-	char* nombreFS = calloc(4,sizeof(char));
-	uint32_t* versionFS = malloc(sizeof(uint32_t));
-	inicioBitmap = malloc(sizeof(uint32_t));
-	bloquesBitmap = malloc(sizeof(uint32_t));
-
-	leerBloque(0,temporario);
-
-	memcpy(nombreFS,temporario,sizeof(char)*4);
-	Logger_Log(LOG_INFO, "El volumen contiene un FileSystem: %s .", nombreFS);
-	free(nombreFS);
-
-	memcpy(versionFS,temporario+4,sizeof(uint32_t));
-	Logger_Log(LOG_INFO, "Version: %lu .", *versionFS);
-	free(versionFS);
-
-	memcpy(inicioBitmap,temporario+8,sizeof(uint32_t));
-	Logger_Log(LOG_INFO, "Bitmap inicia en el bloque: %lu .", *inicioBitmap);
-
-	largoBitmap = largoAlmacenamiento/ BLOCKSIZE;
-	Logger_Log(LOG_INFO, "Largo del Bitmap en bits: %lu .", largoBitmap);
-
-	memcpy(bloquesBitmap,temporario+12,sizeof(uint32_t));
-	Logger_Log(LOG_INFO, "Cantidad de bloques que ocupa el bitmap: %lu .", *bloquesBitmap);
-
-	inicioTablas = 1 + (*bloquesBitmap);
-	Logger_Log(LOG_INFO, "Las tablas de Nodos inician en el bloque: %lu .", inicioTablas);
-
-	bloquesDatos = largoBitmap - 1025 - (uint32_t)(*bloquesBitmap);
-	Logger_Log(LOG_INFO, "Bloques para datos totales: %lu.", bloquesDatos);
-
-	mapearTablas();
-	mapearBitmap();
-
-	crearRaiz();
-
-	conteos();
-
-	free(temporario);
-	}
-}
-
 void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, nroTabla padre){
 
 	nroTabla numeroTablaAUsar = 0;
@@ -173,29 +81,26 @@ void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, nroTabla padre){
 	//sincronizarBitArray();
 }
 
-void borrarArchivo(char* path){
-	nroTabla numeroTablaAUsar = 0;
-	GFile tabla;
-	numeroTablaAUsar = buscarTablaDisponible();
-	if(numeroTablaAUsar == -1){
-		Logger_Log(LOG_ERROR, "No se pueden crear mas directorios.");
-	}else{
-		tabla = devolverTabla(numeroTablaAUsar);
+void borrarArchivo(char* ruta){
+	if(existe(ruta)){
+		nroTabla numeroTabla = localizarTablaArchivo(ruta);
+		GFile tabla = devolverTabla(numeroTabla);
 		tabla.state = 0;
+	}else{
+		Logger_Log(LOG_ERROR, "No existe %s.", ruta);
 	}
 }
 
-void* leerArchivo(char* path){
-	nroTabla numeroTabla = 0;
-	numeroTabla = localizarTablaArchivo(path);
-	if(numeroTabla == -1){
-		Logger_Log(LOG_INFO, "No existe el archivo con la ruta: %s.", path);
-		return -1;
-	}else{
+
+void* leerArchivo(char* ruta){
+
+	if(existe(ruta)){
+		nroTabla numeroTabla = 0;
 		uint32_t tamanio;
 		GFile tabla;
-		tabla = devolverTabla(numeroTabla);
 
+		numeroTabla = localizarTablaArchivo(ruta);
+		tabla = devolverTabla(numeroTabla);
 		tamanio = tabla.file_size ;
 		int bloquesALeer = bloquesNecesarios(tamanio);
 		void* datos = calloc(bloquesALeer,BLOCKSIZE);
@@ -224,111 +129,126 @@ void* leerArchivo(char* path){
 		//free(datosBloqueIndirecto);
 		//free(datosTemporarios);
 		return datos;
-	}
-}
-
-void crearDirectorio(char* nombre, nroTabla padre){
-	nroTabla numeroTablaAUsar = 0;
-	GFile tabla;
-	numeroTablaAUsar = buscarTablaDisponible();
-
-	if(numeroTablaAUsar == -1){
-		Logger_Log(LOG_ERROR, "No se pueden crear mas directorios.");
 	}else{
-		time_t fechaActual;
-		fechaActual = time(NULL);
-		tabla = devolverTabla(numeroTablaAUsar);
-
-		tabla.state = 2;
-		strcpy(tabla.fname,nombre);
-		tabla.tablaPadre = padre;
-		tabla.c_date = fechaActual;
-		tabla.m_date = fechaActual;
-	}
-	*(mapTablas +numeroTablaAUsar) = tabla;
-	Logger_Log(LOG_INFO, "Se creo el directorio: %s. en el bloque: %d, padre: %d", nombre,numeroTablaAUsar,padre);
-}
-
-char** leerDirectorio(char* path){
-	nroTabla numeroTabla = 0;
-	numeroTabla = localizarTablaArchivo(path);
-	if(numeroTabla == -1){
-		Logger_Log(LOG_INFO, "No existe el directorio con la ruta: %s.", path);
+		Logger_Log(LOG_INFO, "No existe el archivo con la ruta: %s.", ruta);
 		return -1;
+	}
+}
+
+void crearDirectorio(char* ruta){
+	if( existe(ruta)){
+		Logger_Log(LOG_ERROR, "El directorio que se quiere crear ya existe");
+
 	}else{
+		char* nombre;// = malloc(sizeof(nombreArchivo));
+			nroTabla numeroTablaAUsar = 0;
+			nroTabla padre = 0;
+			GFile tabla;
+			char* sobrante = malloc(sizeof(rutaArchivo));
+			int largoNombre = 0;
+			int largoSobrante = 0;
+			int largoRuta = strlen(ruta);
+			int caracter = '/';
+
+			nombre = strrchr(ruta, caracter);
+			largoNombre = strlen(nombre);
+			largoSobrante = largoRuta  - largoNombre;
+			strncpy(sobrante,ruta,largoSobrante);
+			*(sobrante+largoSobrante) = '\0';
+
+			padre = localizarTablaArchivo(sobrante);
+			numeroTablaAUsar = buscarTablaDisponible();
+
+			if(numeroTablaAUsar == -1){
+				Logger_Log(LOG_ERROR, "No se pueden crear mas directorios.");
+			}else{
+				time_t fechaActual;
+				fechaActual = time(NULL);
+				tabla = devolverTabla(numeroTablaAUsar);
+
+				tabla.state = 2;
+				strcpy(tabla.fname,(nombre+1));
+				tabla.tablaPadre = padre;
+				tabla.c_date = fechaActual;
+				tabla.m_date = fechaActual;
+			}
+			*(mapTablas +numeroTablaAUsar) = tabla;
+			Logger_Log(LOG_INFO, "Se creo el directorio: %s. en el bloque: %d, padre: %d", nombre,numeroTablaAUsar,padre);
+			//free(nombre);
+			free(sobrante);
+	}
+
+}
+
+char** leerDirectorio(char* ruta){
+
+	if(existe(ruta)){
+		nroTabla numeroTabla = 0;
 		char** listadoDeArchivos = calloc(GFILEBYTABLE,sizeof(char*));
 		int j = 0;
 		for(int i = 0 ; i < GFILEBYTABLE ; i++){
 			if((mapTablas + i)->state !=0 && (mapTablas + i)->tablaPadre == numeroTabla){
-				//listadoDeArchivos[j] = calloc(GFILENAMELENGTH,sizeof(char));
 				*(listadoDeArchivos + j) = (mapTablas + i)->fname;
 				j++;
 			}
 		}
 		return listadoDeArchivos;
+	}else{
 
+		Logger_Log(LOG_INFO, "No existe el directorio con la ruta: %s.", ruta);
+		return -1;
 	}
 }
 
-void renombrar(char* path, char* nuevoNombre){
-	nroTabla numeroTabla = 0;
-	numeroTabla = localizarTablaArchivo(path);
-	GFile tabla;
-	if(numeroTabla == -1){
-		Logger_Log(LOG_INFO, "No existe: %s.", path);
+void borrarDirectorio(char* ruta){
+
+	if(existe(ruta)){
+		nroTabla numeroTabla = localizarTablaArchivo(ruta);
+		GFile tabla = devolverTabla(numeroTabla);
+		tabla.state = 0;
+		for(int i = 0 ; i < GFILEBYTABLE ; i++){
+			if((mapTablas + i)->tablaPadre == numeroTabla){
+				tabla = devolverTabla(i);
+				tabla.state = 0;
+			}
+		}
+		Logger_Log(LOG_INFO, "Se elimino el directorio %s y todas sus subCarpetas y archivos.", ruta);
 	}else{
+		Logger_Log(LOG_ERROR, "No existe %s.", ruta);
+	}
+}
+
+void renombrar(char* ruta, char* nuevoNombre){
+
+	if(existe(ruta)){
+		nroTabla numeroTabla = 0;
+		numeroTabla = localizarTablaArchivo(ruta);
+		GFile tabla;
 		tabla = devolverTabla(numeroTabla);
 		strcpy(tabla.fname,nuevoNombre);
 		*(mapTablas + numeroTabla) = tabla;
-		//memcpy((mapTablas + numeroTabla)->fname , nuevoNombre, GFILENAMELENGTH);
-		Logger_Log(LOG_INFO, "Se renombro: %s. a %s", path,nuevoNombre);
+		Logger_Log(LOG_INFO, "Se renombro: %s. a %s", ruta,nuevoNombre);
+	}else{
+		Logger_Log(LOG_INFO, "No existe %s.", ruta);
 	}
 }
 
-
-int* encontrarPadres(char* nombre){
-	int* padresProbables;
-	int aciertos = 0;
-	for(int i = 0; i < GFILEBYTABLE ; i++){
-		if(*(mapTablas + i)->fname == *nombre){
-			*(padresProbables + aciertos) = i;
-			aciertos++;
+bool existe(char* ruta){
+	nroTabla numeroTabla;
+	numeroTabla = localizarTablaArchivo(ruta);
+	GFile tabla;
+	tabla = devolverTabla(numeroTabla);
+	if(numeroTabla < 0 ){
+		return false;
+	}else{
+		if(tabla.state > 0 ){
+			return false;
 		}
 	}
-	if(aciertos == 0){
-		*padresProbables = -1;
-	}
-	return padresProbables;
+	return true;
 }
 
-void conteos(void){
 
-	uint32_t bloquesUso = 0;
-	uint32_t bloquesDisponibles = 0;
-	uint32_t primerBloqueDisponible = 0;
-	int tablasUso = 0;
-	int primerTablaVacia = 0;
-	int tablasDisponibles = 0;
-
-	bloquesDisponibles = contadorBloquesLibres();
-	Logger_Log(LOG_INFO, "Bloques para datos disponibles: %lu .", bloquesDisponibles);
-
-	bloquesUso = (int)bloquesDatos - bloquesDisponibles;
-	Logger_Log(LOG_INFO, "Bloques para datos en uso: %lu .", bloquesUso);
-
-	primerBloqueDisponible = buscarBloqueDisponible();
-	Logger_Log(LOG_INFO, "Primer bloque disponible : %lu .", primerBloqueDisponible);
-
-	tablasDisponibles = contadorTablasLibres();
-	Logger_Log(LOG_INFO, "Tablas disponibles: %d .", tablasDisponibles);
-
-	tablasUso = GFILEBYTABLE - tablasDisponibles;
-	Logger_Log(LOG_INFO, "Tablas en uso: %d .", tablasUso);
-
-	primerTablaVacia = buscarTablaDisponible();
-	Logger_Log(LOG_INFO, "Primer tabla disponible : %d", primerTablaVacia);
-
-}
 
 
 

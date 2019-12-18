@@ -18,7 +18,6 @@ typedef char rutaArchivo[GFILENAMELENGTH*100];
 
 typedef struct{
 	rutaArchivo rutaDirectorio;
-	int largoRuta;
 }parametrosLeerDirectorio;
 
 

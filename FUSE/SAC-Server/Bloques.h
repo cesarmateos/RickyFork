@@ -1,5 +1,4 @@
 #include "Estructuras.h"
-#include"kemmens/logger.h"
 
 void cargarBitArray();
 void leerBloque(uint32_t bloque, void* datos);

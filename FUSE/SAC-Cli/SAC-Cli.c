@@ -54,8 +54,6 @@ static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 
 	rutaArchivo* inicio = malloc(sizeof(rutaArchivo));
 
-	//*inicio = *path;
-
 	int* error_status = NULL;
 	nombreArchivo* listaDeArchivos;
 
@@ -76,30 +74,23 @@ static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 
 int sacMkdir(const char *path, mode_t mode){
 
-	socketConectado = SocketClient_ConnectToServer(puerto);
 	int tamanio = strlen(path);
 	parametrosLeerDirectorio* inicio = malloc(sizeof(parametrosLeerDirectorio));
 	memcpy(inicio->rutaDirectorio,path, tamanio);
-	inicio->largoRuta = tamanio;
 	SocketCommons_SendData(socketConectado, 2, inicio, sizeof(parametrosLeerDirectorio));
 	free(inicio);
-
-	//SocketCommons_CloseSocket(socketConectado);
-
 	return 0;
 }
 
 int sacRmdir(const char *path){
-/*
-	int tamanio = sizeof(rutaArchivo);
-	rutaArchivo* inicio = malloc(sizeof(rutaArchivo));
-	*inicio = *path;
 
-	int* error_status = NULL;
-	SocketCommons_SendHeader(socketConectado,tamanio, 3);
-	SocketCommons_SendData(socketConectado, 3, inicio, tamanio);
+	int tamanio = strlen(path);
+	parametrosLeerDirectorio* inicio = malloc(sizeof(parametrosLeerDirectorio));
+	memcpy(inicio->rutaDirectorio,path, tamanio);
+	SocketCommons_SendData(socketConectado, 3, inicio, sizeof(parametrosLeerDirectorio));
 	free(inicio);
-*/
+	return 0;
+
 	return 0;
 }
 
@@ -199,9 +190,13 @@ int main(int argc, char *argv[]) {
 	// en varios threads
 	return fuse_main(args.argc, args.argv, &sacOperaciones, NULL);
 */
+
+	socketConectado = SocketClient_ConnectToServer(puerto);
+
 	int algo;
-	char* ruta = "/PrimerDirectorio/SegundoDirectorio/TercerDirectorio/PasaPorElSocketPorFavor.txt";
+	char* ruta = "/PrimerDirectorio/SegundoDirectorio/TercerDirectorio/PasaPorElSocketPorFavorC";
 	algo = sacMkdir(ruta, S_IFDIR);
+	algo = sacRmdir(ruta);
 
 	config_destroy(fuseConfig);
 

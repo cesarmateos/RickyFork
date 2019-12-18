@@ -65,6 +65,9 @@ void crearPunterosIndirectosOLd(GFile *tabla, int cantidad){
 
 
 int localizarTablaArchivo(char* path){
+	if(strlen(path) == 0){
+		return 0;
+	}
 	nroTabla numeroTablaPadre = 0;
 	size_t tamanio = strlen(path);
 	int tamanioSobrante = 0;
@@ -121,6 +124,56 @@ int localizarTablaArchivo(char* path){
 	free(sobrante);
 	return -1;
 }
+
+int localizarTablaArchivo2(char* ruta){
+	if(strlen(ruta) == 0){
+		return 0;
+	}
+	nroTabla numeroTablaPadre = 0;
+	size_t tamanio = strlen(ruta);
+	int tamanioSobrante = 0;
+	int tamanioExtracto = 0;
+	int tamanioRestoSobrante = 0;
+	char* primerExtracto = malloc(GFILENAMELENGTH);
+	char* primerSobrante = malloc(tamanio);
+	char* restoExtracto = malloc(GFILENAMELENGTH);
+	char* restoSobrante = malloc(tamanio);
+	int caracter = '/';
+	GFile tabla;
+	memcpy(primerSobrante, ruta, tamanio);
+
+	*(primerSobrante + tamanio) = '\0';
+	primerExtracto = strrchr(ruta,caracter);
+	tamanioExtracto =  strlen(primerExtracto);
+	tamanioSobrante = tamanio - tamanioExtracto;
+	*(primerSobrante + tamanioSobrante) = '\0';
+	memcpy(restoSobrante, primerSobrante, tamanioSobrante);
+
+	for(nroTabla i = 0; i < GFILEBYTABLE ; i++){
+		tabla = devolverTabla(i);
+		if(strcmp(tabla.fname , (primerExtracto +1))  == 0 && tabla.state != 0){
+			tamanioRestoSobrante = tamanioSobrante;
+			//numeroTablaPadre = tabla.tablaPadre;
+			do{
+				if(tamanioRestoSobrante == 0 && numeroTablaPadre == 0){
+					return i;
+				}
+				*(restoSobrante + tamanioRestoSobrante) = '\0';
+				numeroTablaPadre = tabla.tablaPadre;
+				tabla = devolverTabla(numeroTablaPadre);
+				restoExtracto = strrchr(restoSobrante,caracter);
+				tamanioExtracto =  strlen(restoExtracto);
+				tamanioRestoSobrante -= tamanioExtracto;
+				memcpy(restoSobrante, ruta, tamanioRestoSobrante);
+
+			}while(strcmp(tabla.fname, (restoExtracto +1) ) == 0);
+		}
+		memcpy(primerSobrante, ruta, tamanio);
+		*(primerSobrante + tamanio) = '\0';
+	}
+	return -1;
+}
+
 
 void sincronizarTabla(void){
 	msync(mapTablas,(GFILEBYTABLE * sizeof(GFile)),MS_SYNC);

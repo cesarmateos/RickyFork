@@ -28,25 +28,12 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 		}
 		case CREARDIR:
 		{
-			char* nombre = malloc(sizeof(GFILENAMELENGTH));
-			char* sobrante;
-			nroTabla padre = 0;
-			int caracter = '/';
-			int largoNombre = 0;
-			int largoSobrante = 0;
-
-			nombre = strrchr(((parametrosLeerDirectorio*)actualData)->rutaDirectorio,caracter);
-			largoNombre = strlen(nombre);
-			largoSobrante = ((parametrosLeerDirectorio*)actualData)->largoRuta - largoNombre;
-			strncpy(sobrante,((parametrosLeerDirectorio*)actualData)->rutaDirectorio, largoSobrante);
-			padre = localizarTablaArchivo(sobrante);
-			crearDirectorio( (nombre+1) ,padre);
-			free(nombre);
-
+			crearDirectorio( ((parametrosLeerDirectorio*)actualData)->rutaDirectorio);
 			break;
 		}
 		case BORRARDIR:
 		{
+			borrarDirectorio( ((parametrosLeerDirectorio*)actualData)->rutaDirectorio);
 			break;
 		}
 		case CREARFILE:

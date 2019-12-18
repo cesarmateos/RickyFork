@@ -1,4 +1,3 @@
-#include "Estructuras.h"
 #include "Bloques.h"
 
 void mapearTablas(void);
