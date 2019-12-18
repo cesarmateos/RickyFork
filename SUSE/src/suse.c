@@ -1,4 +1,17 @@
-#include "suse.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <time.h>
+#include <semaphore.h>
+#include<commons/log.h>
+#include<commons/string.h>
+#include<commons/bitarray.h>
+#include<commons/config.h>
+#include"kemmens/logger.h"
+#include<commons/collections/list.h>
+#include<commons/temporal.h>
+#include<readline/readline.h>
+#include"kemmens/SocketServer.h"
 
 struct t_hilo{
 	int identificador;
@@ -26,11 +39,6 @@ static sem_t sem;
 //estructuras a ser utilizadas en suse
 
 static int i =0;
-void iniciarServidor(){
-	SocketServer_Start("SUSE",3801);
-	SocketServer_ActionsListeners evento;
-	SocketServer_ListenForConnection(evento);
-}
 void iniciarLog(void){
 	Logger_CreateLog("SUSE.log","SUSE",true);
 }
@@ -83,8 +91,8 @@ void cargarhiloAnew(T_hilo* hilo,t_list* new){
 	Logger_Log(LOG_INFO,"se cargo el hilo en new %d",hilo->identificador);
 }
 //devuelve el proximo hilo a ejecutar
-T_hilo* proximoHiloAejecutar(T_programa programa){
-	return list_get(programa.ready,0);
+T_hilo* proximoHiloAejecutar(T_programa* programa){
+	return list_get(programa->ready,0);
 }
 
 bool sjf(T_hilo* hiloA,T_hilo* hiloB){
@@ -162,7 +170,57 @@ void decrementarSemaforo(T_semaforo* sem,T_hilo* hilo,t_list* bloqueado,t_list* 
 	}
 }
 
-
+void alrecibirPaquete(int socketID, int messageType, void* actualData){
+	t_list* listaPrograma = list_create();
+	t_list* blockeados = list_create();
+	t_list* new = list_create();
+	t_list* lista = cargarsemaforos(2);
+	switch (messageType){
+	case INICIAR:
+	{
+		T_programa programa = crearPrograma(socketID,i);
+		CargarPrograma(&programa,listaPrograma);
+		i++;
+		break;
+	}
+	case CARGARHILO:
+	{
+		T_hilo hilo = crearHilo(actualData,socketID,0);
+		cargarhiloAnew(&hilo,new);
+		cargarhilos(new,listaPrograma);
+		break;
+	}
+	case PROXIMOHILOAEJECUTAR:
+	{
+		T_programa* programa = encontrarPrograma(socketID,listaPrograma);
+		T_hilo* hilo =proximoHiloAejecutar(programa);
+		break;
+	}
+	case INCREMENTARSEMAFORO:
+	{
+		break;
+	}
+	case DECREMENTARSEMAFORO:
+	{
+		break;
+	}
+	case BLOQUEAR:
+	{
+		T_programa* programa = encontrarPrograma(socketID,listaPrograma);
+		bloquearHilo(programa,blockeados);
+	}
+	case ELIMINAR:
+	{
+		break;
+	}
+	}
+}
+void iniciarServidor(){
+	SocketServer_Start("SUSE",3801);
+	SocketServer_ActionsListeners* evento = malloc(sizeof(SocketServer_ActionsListeners));
+	evento->OnPacketArrived = alrecibirPaquete;
+	SocketServer_ListenForConnection(*evento);
+}
 
 int main() {
 	iniciarLog();
@@ -170,10 +228,6 @@ int main() {
 	t_config* suseconfig = config_create("suse.config");
 	int nivelDeMultiprogramacion = config_get_int_value(suseconfig,"MAX_MULTIPROG");
 	sem_init(&sem,1,nivelDeMultiprogramacion);
-	t_list* listaPrograma = list_create();
-	t_list* blockeados = list_create();
-	t_list* new = list_create();
-	t_list* lista = cargarsemaforos(2);
 	iniciarServidor();
 	/*switch(messageType){
 		case 1:
