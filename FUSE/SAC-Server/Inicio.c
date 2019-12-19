@@ -143,25 +143,26 @@ int main(){
 
 	int largoPrueba = strlen(prueba);
 	int largoPrueba2 = strlen(prueba2);
-	//archivoNuevo(nombre1,prueba,largoPrueba,3);
+/*
 	int tablaArch = 0;
 	tablaArch = localizarTablaArchivo2(ruta2);
 	printf("La tabla del archivo 2 %s es la: %d .\n", ruta2, tablaArch);
-
-
-	//crearDirectorio(nombre4);
-	//crearDirectorio(nombre5);
-	//crearDirectorio(ruta3);
-	//crearDirectorio(ruta4);
-	/*
+*/
+/*
+	crearDirectorio(nombre3);
+	crearDirectorio(nombre4);
+	crearDirectorio(nombre5);
+*/
+/*
 	archivoNuevo(nombre1,prueba,largoPrueba,3);
 	archivoNuevo(nombre2,prueba2,largoPrueba2,3);
 	archivoNuevo(nombre1,prueba,largoPrueba,2);
+*/
 
 	int tablaArch = 0;
 	tablaArch = localizarTablaArchivo(ruta);
 	printf("La tabla del archivo %s es la: %d .\n", ruta, tablaArch);
-
+/*
 	tablaArch = localizarTablaArchivo(ruta2);
 	printf("La tabla del archivo %s es la: %d .\n", ruta2, tablaArch);
 

@@ -6,10 +6,16 @@
 
 //Message Types
 
-#define  LEERDIR 1
-#define  CREARDIR 2
-#define  BORRARDIR 3
-#define  CREARFILE 4
-#define  BORRARFILE 5
+#define  ATRIBUTOS 1
+#define	 ABRIRDIR 2
+#define  LEERDIR 3
+#define  CREARDIR 4
+#define  BORRARDIR 5
+#define  ABRIRFILE 6
+#define  LEERFILE 7
+#define  CREARFILE 8
+#define  BORRARFILE 9
+#define  ESCRIBIRFILE 10
+#define  DEVUELVETABLA 11
 
 #endif /* SOCKETMESSAGETYPES_H_ */

@@ -64,75 +64,14 @@ void crearPunterosIndirectosOLd(GFile *tabla, int cantidad){
 }
 
 
-int localizarTablaArchivo(char* path){
-	if(strlen(path) == 0){
-		return 0;
-	}
-	nroTabla numeroTablaPadre = 0;
-	size_t tamanio = strlen(path);
-	int tamanioSobrante = 0;
-	int tamanioExtracto = 0;
-	char* extracto;
-	char* sobrante = malloc(tamanio);
-	char* segmentoActual = malloc(GFILENAMELENGTH);
-	int caracter = '/';
-	char seg[GFILENAMELENGTH];
-	GFile tabla;
-
-	extracto = strrchr(path,caracter);								//Extraigo el nombre del archivo
-	tamanioExtracto =  strlen(extracto);							//Calculo el largo del nombre del archivo
-	tamanioSobrante = tamanio - tamanioExtracto;					//Calculo el largo del resto de la ruta
-	memcpy(segmentoActual,extracto,tamanioExtracto);
-	memcpy(sobrante, path, tamanioSobrante);						//Copio en sobrante el resto de la ruta.
-
-
-	for(nroTabla i = 0; i < GFILEBYTABLE ; i++){
-		numeroTablaPadre = i;
-		tabla = devolverTabla(numeroTablaPadre);
-		for(int z = 0 ; z < (tamanioExtracto -1) ; z++){
-			seg[z] = *(segmentoActual + z + 1 );
-		}
-			seg[tamanioExtracto -1] = '\0';
-
-		while(strcmp(tabla.fname , seg)  == 0 ){
-			*(sobrante + tamanioSobrante) = '\0';						//Pongo en sobrante el caracter nulo
-			*(segmentoActual + tamanioExtracto) = '\0';
-			numeroTablaPadre = tabla.tablaPadre;						//Asgino la tabla Padre al numero de tabla
-			if(tamanioSobrante == 0 && numeroTablaPadre == 0){
-				free(segmentoActual);
-				free(sobrante);
-				return i;
-			}else{
-				tabla = devolverTabla(numeroTablaPadre);
-				extracto = strrchr(sobrante,caracter);					//Extraigo el siguiente directorio de la ruta
-				tamanioExtracto =  strlen(extracto);					//Calculo el largo el nuevo extracto.
-				memcpy(segmentoActual,extracto,tamanioExtracto);
-				tamanioSobrante -= tamanioExtracto;						//Calculo el largo del resto de la ruta.
-				for(int z = 0 ; z < tamanioExtracto-1 ; z++){
-					seg[z] = *(segmentoActual + z + 1 );
-				}
-					seg[tamanioExtracto-1] = '\0';
-			}
-		}
-		extracto = strrchr(path,caracter);								//Extraigo el nombre del archivo
-		tamanioExtracto =  strlen(extracto);							//Calculo el largo del nombre del archivo
-		tamanioSobrante = tamanio - tamanioExtracto;					//Calculo el largo del resto de la ruta
-		memcpy(segmentoActual,extracto,tamanioExtracto);
-		memcpy(sobrante, path, tamanioSobrante);						//Copio en sobrante el resto de la ruta.
-	}
-	free(segmentoActual);
-	free(sobrante);
-	return -1;
-}
-
-int localizarTablaArchivo2(char* ruta){
+int localizarTablaArchivo(char* ruta){
 	if(strlen(ruta) == 0){
 		return 0;
 	}
 	nroTabla numeroTablaPadre = 0;
 	size_t tamanio = strlen(ruta);
-	int tamanioSobrante = 0;
-	int tamanioExtracto = 0;
+	int tamanioPrimerSobrante = 0;
+	int tamanioPrimerExtracto = 0;
 	int tamanioRestoSobrante = 0;
 	char* primerExtracto = malloc(GFILENAMELENGTH);
 	char* primerSobrante = malloc(tamanio);
@@ -140,37 +79,39 @@ int localizarTablaArchivo2(char* ruta){
 	char* restoSobrante = malloc(tamanio);
 	int caracter = '/';
 	GFile tabla;
-	memcpy(primerSobrante, ruta, tamanio);
 
-	*(primerSobrante + tamanio) = '\0';
-	primerExtracto = strrchr(ruta,caracter);
-	tamanioExtracto =  strlen(primerExtracto);
-	tamanioSobrante = tamanio - tamanioExtracto;
-	*(primerSobrante + tamanioSobrante) = '\0';
-	memcpy(restoSobrante, primerSobrante, tamanioSobrante);
+	separar(ruta,primerSobrante,primerExtracto);
+	tamanioPrimerSobrante = strlen(primerSobrante);
+
+	memcpy(restoSobrante, primerSobrante, tamanioPrimerSobrante);
+	*(restoSobrante + tamanioPrimerSobrante) = '\0';
 
 	for(nroTabla i = 0; i < GFILEBYTABLE ; i++){
 		tabla = devolverTabla(i);
-		if(strcmp(tabla.fname , (primerExtracto +1))  == 0 && tabla.state != 0){
-			tamanioRestoSobrante = tamanioSobrante;
-			//numeroTablaPadre = tabla.tablaPadre;
+		if(strcmp(tabla.fname , primerExtracto )  == 0 && tabla.state != 0){
+			tamanioRestoSobrante = tamanioPrimerSobrante;
+			numeroTablaPadre = tabla.tablaPadre;
 			do{
 				if(tamanioRestoSobrante == 0 && numeroTablaPadre == 0){
+					free(primerExtracto);
+					free(primerSobrante);
+					free(restoExtracto);
+					free(restoSobrante);
 					return i;
 				}
-				*(restoSobrante + tamanioRestoSobrante) = '\0';
-				numeroTablaPadre = tabla.tablaPadre;
+				separar(restoSobrante,restoSobrante,restoExtracto);
 				tabla = devolverTabla(numeroTablaPadre);
-				restoExtracto = strrchr(restoSobrante,caracter);
-				tamanioExtracto =  strlen(restoExtracto);
-				tamanioRestoSobrante -= tamanioExtracto;
-				memcpy(restoSobrante, ruta, tamanioRestoSobrante);
-
-			}while(strcmp(tabla.fname, (restoExtracto +1) ) == 0);
+				numeroTablaPadre = tabla.tablaPadre;
+				tamanioRestoSobrante = strlen(restoSobrante);
+			}while(strcmp(tabla.fname, restoExtracto) == 0);
 		}
-		memcpy(primerSobrante, ruta, tamanio);
-		*(primerSobrante + tamanio) = '\0';
+		memcpy(restoSobrante, primerSobrante, tamanioPrimerSobrante);
+		*(restoSobrante + tamanioPrimerSobrante) = '\0';
 	}
+	free(primerExtracto);
+	free(primerSobrante);
+	free(restoExtracto);
+	free(restoSobrante);
 	return -1;
 }
 
@@ -178,4 +119,39 @@ int localizarTablaArchivo2(char* ruta){
 void sincronizarTabla(void){
 	msync(mapTablas,(GFILEBYTABLE * sizeof(GFile)),MS_SYNC);
 }
+
+char* sobrante(char* ruta){
+	int caracter = '/';
+	int largoRuta = strlen(ruta);
+	char* extracto;
+	extracto = strrchr(ruta,caracter);
+	int largoExtracto  = strlen(extracto);
+	int largoSobrante = largoRuta - largoExtracto;
+	char* sobrante = malloc(largoSobrante);
+	memcpy(sobrante,ruta,largoRuta);
+	*(sobrante + largoSobrante) = '\0';
+	return *sobrante;
+}
+
+char* extracto(char* ruta){
+	int caracter = '/';
+	char* extracto;
+	extracto = strrchr(ruta,caracter);
+	//*(extracto + strlen(extracto)) = '\0';
+	return *(extracto +1);
+}
+
+void separar(char*ruta, char* sobrante, char* extracto){
+	int caracter = '/';
+	int largoRuta = strlen(ruta);
+	char* extractoFun;
+	extractoFun = strrchr(ruta,caracter);
+	int largoExtracto  = strlen(extractoFun);
+	strncpy(extracto, (extractoFun + 1) , largoExtracto);
+	int largoSobrante = largoRuta - largoExtracto;
+	memcpy(sobrante,ruta,largoRuta);
+	*(sobrante + largoSobrante) = '\0';
+}
+
+
 

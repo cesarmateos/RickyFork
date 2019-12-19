@@ -136,7 +136,7 @@ void* leerArchivo(char* ruta){
 }
 
 void crearDirectorio(char* ruta){
-	if( existe(ruta)){
+	if(existe(ruta)){
 		Logger_Log(LOG_ERROR, "El directorio que se quiere crear ya existe");
 
 	}else{
@@ -203,9 +203,9 @@ char** leerDirectorio(char* ruta){
 void borrarDirectorio(char* ruta){
 
 	if(existe(ruta)){
+		tablaOFF(ruta);
 		nroTabla numeroTabla = localizarTablaArchivo(ruta);
 		GFile tabla = devolverTabla(numeroTabla);
-		tabla.state = 0;
 		for(int i = 0 ; i < GFILEBYTABLE ; i++){
 			if((mapTablas + i)->tablaPadre == numeroTabla){
 				tabla = devolverTabla(i);
@@ -216,6 +216,23 @@ void borrarDirectorio(char* ruta){
 	}else{
 		Logger_Log(LOG_ERROR, "No existe %s.", ruta);
 	}
+}
+
+void borrarDirectorioVacio(char* ruta){
+	if(existe(ruta)){
+		char** listaArchivos;
+		listaArchivos = leerDirectorio(ruta);
+		int largo = strlen(listaArchivos[0]);
+		if(largo>0){
+			tablaOFF(ruta);
+			Logger_Log(LOG_INFO, "Se elimino el directorio %s y todas sus subCarpetas y archivos.", ruta);
+		}else{
+			Logger_Log(LOG_ERROR, "Se intento borrar el directorio %s. y no esta vacio", ruta);
+		}
+	}else{
+		Logger_Log(LOG_ERROR, "No existe %s.", ruta);
+	}
+
 }
 
 void renombrar(char* ruta, char* nuevoNombre){
@@ -249,6 +266,9 @@ bool existe(char* ruta){
 }
 
 
-
-
+void tablaOFF(char* ruta){
+	nroTabla numeroTabla = localizarTablaArchivo(ruta);
+	GFile tabla = devolverTabla(numeroTabla);
+	tabla.state = 0;
+}
 

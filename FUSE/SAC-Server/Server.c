@@ -24,16 +24,39 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 			char** ls = malloc(sizeof(rutaArchivo));
 			ls = leerDirectorio(actualData);
 			printf("Se leyó el directorio %s :", ls);
+			//SocketCommons_SendData(sock,);
 			break;
 		}
 		case CREARDIR:
 		{
-			crearDirectorio( ((parametrosLeerDirectorio*)actualData)->rutaDirectorio);
+			crearDirectorio( ((soloRuta*)actualData)->rutaDirectorio);
 			break;
 		}
 		case BORRARDIR:
 		{
-			borrarDirectorio( ((parametrosLeerDirectorio*)actualData)->rutaDirectorio);
+			borrarDirectorioVacio( ((soloRuta*)actualData)->rutaDirectorio);
+			break;
+		}
+		case ABRIRDIR:
+		{
+			bool respuesta = existe( ((soloRuta*)actualData)->rutaDirectorio);
+			break;
+		}
+		case ATRIBUTOS:
+		{
+			GFile tabla;
+			nroTabla nroTabla = devolverTabla( ((soloRuta*)actualData)->rutaDirectorio);
+			tabla = *(mapTablas + nroTabla);
+			SocketCommons_SendData(sock,DEVUELVETABLA,tabla,sizeof(GFile));
+			break;
+		}
+		case ABRIRFILE:
+		{
+			bool respuesta = existe( ((soloRuta*)actualData)->rutaDirectorio);
+			break;
+		}
+		case LEERFILE:
+		{
 			break;
 		}
 		case CREARFILE:
@@ -41,6 +64,10 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 			break;
 		}
 		case BORRARFILE:
+		{
+			break;
+		}
+		case ESCRIBIRFILE:
 		{
 			break;
 		}
