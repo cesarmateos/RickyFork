@@ -33,6 +33,7 @@ typedef struct t_programa T_programa;
 struct t_semaforo{
 	char identificador;
 	int valor;
+	int valorMaximo;
 };
 typedef struct t_semaforo T_semaforo;
 static sem_t sem;
@@ -49,11 +50,13 @@ t_list* cargarsemaforos(int size){
 	t_list* listaDeSemaforos = list_create();
 	char** identificadores = config_get_array_value(suseconfig,"SEM_IDS");
 	char** valoresiniciales = config_get_array_value(suseconfig,"SEM_INIT");
+	char** valoresmaximos = config_get_array_value(suseconfig,"SEM_MAX");
 	for(int i=0;i<size;i++){
 		sem.identificador = *identificadores[i];
 		Logger_Log(LOG_INFO,"el identificador es %c\n",sem.identificador);
 		sem.valor = (*valoresiniciales[i]-'0');
 		Logger_Log(LOG_INFO,"el valor es %d\n",sem.valor);
+		sem.valorMaximo = (*valoresmaximos[i]-'0');
 		list_add(listaDeSemaforos,&sem);
 	}
 	free(suseconfig);
@@ -142,7 +145,7 @@ void cargarhilos(t_list* new,t_list* listaProgramas){
 		sem_wait(&sem);
 		T_hilo* hiloAagregar = list_remove(new,0);
 		T_programa* programa = encontrarPrograma(hiloAagregar->pid,listaProgramas);
-		Logger_Log(LOG_INFO,"se cargo el hilo %d en el programa %d\n",hiloAagregar->identificador,programa->identificador);
+		Logger_Log(LOG_INFO,"se cargo el hilo %d en el programa %d\n",hiloAagregar->identificador,programa->numeroDePrograma);
 		list_add(programa->ready,hiloAagregar);
 	}
 }
@@ -187,6 +190,7 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	{
 		T_programa programa = crearPrograma(socketID,i);
 		CargarPrograma(&programa,listaProgramas);
+		printf("hola");
 		i++;
 		break;
 	}
