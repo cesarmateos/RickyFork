@@ -120,27 +120,6 @@ void sincronizarTabla(void){
 	msync(mapTablas,(GFILEBYTABLE * sizeof(GFile)),MS_SYNC);
 }
 
-char* sobrante(char* ruta){
-	int caracter = '/';
-	int largoRuta = strlen(ruta);
-	char* extracto;
-	extracto = strrchr(ruta,caracter);
-	int largoExtracto  = strlen(extracto);
-	int largoSobrante = largoRuta - largoExtracto;
-	char* sobrante = malloc(largoSobrante);
-	memcpy(sobrante,ruta,largoRuta);
-	*(sobrante + largoSobrante) = '\0';
-	return *sobrante;
-}
-
-char* extracto(char* ruta){
-	int caracter = '/';
-	char* extracto;
-	extracto = strrchr(ruta,caracter);
-	//*(extracto + strlen(extracto)) = '\0';
-	return *(extracto +1);
-}
-
 void separar(char*ruta, char* sobrante, char* extracto){
 	int caracter = '/';
 	int largoRuta = strlen(ruta);
@@ -151,6 +130,12 @@ void separar(char*ruta, char* sobrante, char* extracto){
 	int largoSobrante = largoRuta - largoExtracto;
 	memcpy(sobrante,ruta,largoRuta);
 	*(sobrante + largoSobrante) = '\0';
+}
+
+void tablaOFF(char* ruta){
+	nroTabla numeroTabla = localizarTablaArchivo(ruta);
+	GFile tabla = devolverTabla(numeroTabla);
+	tabla.state = 0;
 }
 
 

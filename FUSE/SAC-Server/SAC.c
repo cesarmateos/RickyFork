@@ -12,10 +12,10 @@ void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, nroTabla padre){
 		Logger_Log(LOG_ERROR, "No se pueden crear mas archivos.");
 	}else{
 
-		int bloquesNecesariosDatos = bloquesNecesarios(tamanio);
-		int bloquesNecesariosIndirectos = ceil( bloquesNecesariosDatos / 1024.0 );
-		int bloquesNecesariosTotales = bloquesNecesariosDatos + bloquesNecesariosIndirectos;
-		int bloquesDisponibles = contadorBloquesLibres();
+		uint32_t bloquesNecesariosDatos = bloquesNecesarios(tamanio);
+		uint32_t bloquesNecesariosIndirectos = ceil( bloquesNecesariosDatos / 1024.0 );
+		uint32_t bloquesNecesariosTotales = bloquesNecesariosDatos + bloquesNecesariosIndirectos;
+		uint32_t bloquesDisponibles = contadorBloquesLibres();
 
 		time_t fechaActual;
 		fechaActual = time(NULL);
@@ -86,6 +86,22 @@ void borrarArchivo(char* ruta){
 		nroTabla numeroTabla = localizarTablaArchivo(ruta);
 		GFile tabla = devolverTabla(numeroTabla);
 		tabla.state = 0;
+		int i = 0;
+		uint32_t bloqueIndirecto = 0;
+		uint32_t bloqueDatos = 0;
+		ptrGBloque* arrayPunterosABloques = calloc(GFILEBYTABLE,sizeof(ptrGBloque));
+
+		while(tabla.blk_indirect[i] && i < BLKINDIRECT){
+			bloqueIndirecto = tabla.blk_indirect[i];
+			leerBloque(bloqueIndirecto,arrayPunterosABloques);
+			int j = 0;
+			while( *(arrayPunterosABloques + j) ){
+				bloqueDatos = *(arrayPunterosABloques + j);
+				bitarray_clean_bit(mapBitmap, bloqueDatos);
+				j++;
+			}
+			i++;
+		}
 	}else{
 		Logger_Log(LOG_ERROR, "No existe %s.", ruta);
 	}
@@ -132,6 +148,24 @@ void* leerArchivo(char* ruta){
 	}else{
 		Logger_Log(LOG_INFO, "No existe el archivo con la ruta: %s.", ruta);
 		return -1;
+	}
+}
+void escribirArchivo(char* ruta, uint32_t tamanio, void*datos){
+	if(existe(ruta)){
+		GFile tabla = localizarTablaArchivo(ruta);
+		uint32_t tamanioAnterior = tabla.file_size;
+		uint32_t bloquesUsados = bloquesOcupados(tamanioAnterior);
+		uint32_t bloquesNecesariosDatos = bloquesNecesarios(tamanio);
+		uint32_t bloquesNecesariosIndirectos = ceil( bloquesNecesariosDatos / 1024.0 );
+		uint32_t bloquesNecesariosTotales = bloquesNecesariosDatos + bloquesNecesariosIndirectos;
+		uint32_t bloquesDisponibles = contadorBloquesLibres();
+		if( bloquesNecesariosTotales > (bloquesDisponibles + bloquesUsados) ){
+			Logger_Log(LOG_ERROR, "No hay espacio suficiente para guardar los cambios en el archivo %s.", ruta);
+		}else{
+
+		}
+	}else{
+		Logger_Log(LOG_ERROR, "El archivo %s no existe.", ruta);
 	}
 }
 
@@ -253,22 +287,17 @@ void renombrar(char* ruta, char* nuevoNombre){
 bool existe(char* ruta){
 	nroTabla numeroTabla;
 	numeroTabla = localizarTablaArchivo(ruta);
-	GFile tabla;
-	tabla = devolverTabla(numeroTabla);
 	if(numeroTabla < 0 ){
 		return false;
-	}else{
-		if(tabla.state > 0 ){
-			return false;
-		}
+	}
+	GFile tabla;
+	tabla = devolverTabla(numeroTabla);
+	if(tabla.state > 0 ){
+		return false;
 	}
 	return true;
 }
 
 
-void tablaOFF(char* ruta){
-	nroTabla numeroTabla = localizarTablaArchivo(ruta);
-	GFile tabla = devolverTabla(numeroTabla);
-	tabla.state = 0;
-}
+
 

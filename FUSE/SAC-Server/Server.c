@@ -30,6 +30,7 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 		case CREARDIR:
 		{
 			crearDirectorio( ((soloRuta*)actualData)->rutaDirectorio);
+			free(actualData); //??
 			break;
 		}
 		case BORRARDIR:
@@ -45,9 +46,9 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 		case ATRIBUTOS:
 		{
 			GFile tabla;
-			nroTabla nroTabla = devolverTabla( ((soloRuta*)actualData)->rutaDirectorio);
+			nroTabla nroTabla = localizarTablaArchivo( ((soloRuta*)actualData)->rutaDirectorio);
 			tabla = *(mapTablas + nroTabla);
-			SocketCommons_SendData(sock,DEVUELVETABLA,tabla,sizeof(GFile));
+			//SocketCommons_SendData(sock,DEVUELVETABLA,tabla,sizeof(GFile));
 			break;
 		}
 		case ABRIRFILE:
@@ -65,6 +66,7 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 		}
 		case BORRARFILE:
 		{
+			borrarArchivo( ((soloRuta*)actualData)->rutaDirectorio);
 			break;
 		}
 		case ESCRIBIRFILE:

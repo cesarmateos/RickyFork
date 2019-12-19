@@ -18,15 +18,15 @@
 
 char* puerto;
 
-static int sacGetAttr(const char *path, struct stat *stbuf);
-static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
-static int sacAbrir(const char *path, struct fuse_file_info *fi) ;
-static int sacLeer(const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *fi) ;
-int sacMkdir(const char *path, mode_t mode);
-int sacRmdir(const char *path);
-int sacCrear(const char patu, mode_t mode, struct fuse_file_info *fi);
-int sacEscribir (const char path, const char data, size_t size, off_t offset, struct fuse_file_info *fi) ;
-int sacUnlink(const char *path);
+static int sacGetAttr(const char *ruta, struct stat *stbuf);
+static int sacLeerDir(const char *ruta, void *buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
+static int sacAbrir(const char *ruta, struct fuse_file_info *fi) ;
+static int sacLeer(const char *ruta, char *buffer, size_t size, off_t offset, struct fuse_file_info *fi) ;
+int sacMkdir(const char *ruta, mode_t mode);
+int sacRmdir(const char *ruta);
+int sacCrear(const char ruta, mode_t mode, struct fuse_file_info *fi);
+int sacEscribir (const char ruta, const char data, size_t size, off_t offset, struct fuse_file_info *fi) ;
+int sacUnlink(const char *ruta);
 int sacAbrirDirectorio(const char *dirName);
 
 struct t_runtime_options {

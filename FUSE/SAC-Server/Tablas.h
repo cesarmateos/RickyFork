@@ -16,8 +16,6 @@ int localizarTablaArchivo(char* path);
 
 void sincronizarTabla(void);
 
-char* sobrante(char* ruta);
-
-char* extracto(char* ruta);
-
 void separar(char*ruta, char* sobrante, char* extracto);
+
+void tablaOFF(char* ruta);

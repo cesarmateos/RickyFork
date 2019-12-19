@@ -6,35 +6,38 @@ t_config* leer_config(void){
 
 int socketConectado;
 
-static int sacGetAttr(const char *path, struct stat *stbuf){
+static int sacGetAttr(const char *ruta, struct stat *stbuf){
 
-	int tamanio = strlen(path);
+	int tamanio = strlen(ruta);
 	soloRuta* inicio = malloc(sizeof(soloRuta));
-	memcpy(inicio->rutaDirectorio,path, tamanio);
+	memcpy(inicio->rutaDirectorio,ruta, tamanio);
 	SocketCommons_SendData(socketConectado, ATRIBUTOS, inicio, sizeof(soloRuta));
 	free(inicio);
-	GFile tabla;
+	GFile* tabla = malloc(sizeof(GFile));
 	tabla = SocketCommons_ReceiveData(socketConectado, DEVUELVETABLA, 0);
 
 	int res = 0;
 
 	memset(stbuf, 0, sizeof(struct stat));
 
-	//Si path es igual a "/" nos estan pidiendo los atributos del punto de montaje
 
-	if (strcmp(path, "/") == 0) {
+	if (strcmp(ruta, "/") == 0) {		//Si ruta es igual a "/" nos estan pidiendo los atributos del punto de montaje
 		stbuf->st_mode = S_IFDIR | 0755;
 		stbuf->st_nlink = 2;
-	} else if (strcmp(path, DEFAULT_FILE_PATH) == 0) {
-		stbuf->st_mode = S_IFREG | 0444;
-		stbuf->st_nlink = 1;
-		stbuf->st_size = strlen(DEFAULT_FILE_CONTENT);
-	} else {
+	} else if((uint32_t*)tabla == -1){
 		res = -ENOENT;
+	} else{
+		if(tabla->state == 2){
+			stbuf->st_mode = S_IFDIR | 0755;
+		}else{
+			stbuf->st_mode = S_IFREG | 0444;
+			stbuf->st_size = tabla->file_size;
+		}
+		stbuf->st_nlink = 1;
 	}
 	return res;
-
 }
+
 
 int sacAbrirDirectorio(const char *dirName){
 	int tamanio = strlen(dirName);
@@ -45,14 +48,14 @@ int sacAbrirDirectorio(const char *dirName){
 	return 0;
 }
 
-static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
+static int sacLeerDir(const char *ruta, void *buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
-	printf( "Listado de archivos de %s\n", path );
+	printf( "Listado de archivos de %s\n", ruta );
 
 	(void) offset;
 	(void) fi;
 
-	if (strcmp(path, "/") != 0)
+	if (strcmp(ruta, "/") != 0)
 		return -ENOENT;
 
 	int tamanio = sizeof(rutaArchivo);
@@ -65,7 +68,7 @@ static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 	SocketCommons_SendHeader(socketConectado,tamanio, LEERDIR);
 	SocketCommons_SendData(socketConectado, LEERDIR, inicio, tamanio);
 	free(inicio);
-	listaDeArchivos = SocketCommons_ReceiveData(socketConectado, LEERDIR, error_status);
+	listaDeArchivos = SocketCommons_ReceiveData(socketConectado, LISTADOARCHIVOS, error_status);
 
 	int i = 0;
 
@@ -77,53 +80,69 @@ static int sacLeerDir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 	return 0;
 }
 
-int sacMkdir(const char *path, mode_t mode){
+int sacMkdir(const char *ruta, mode_t mode){
 
-	int tamanio = strlen(path);
+	int tamanio = strlen(ruta);
 	soloRuta* inicio = malloc(sizeof(soloRuta));
-	memcpy(inicio->rutaDirectorio,path, tamanio);
+	memcpy(inicio->rutaDirectorio,ruta, tamanio);
 	SocketCommons_SendData(socketConectado, CREARDIR, inicio, sizeof(soloRuta));
 	free(inicio);
 	return 0;
 
 }
 
-int sacRmdir(const char *path){
+int sacRmdir(const char *ruta){
 
-	int tamanio = strlen(path);
+	int tamanio = strlen(ruta);
 	soloRuta* inicio = malloc(sizeof(soloRuta));
-	memcpy(inicio->rutaDirectorio,path, tamanio);
+	memcpy(inicio->rutaDirectorio,ruta, tamanio);
 	SocketCommons_SendData(socketConectado, BORRARDIR, inicio, sizeof(soloRuta));
 	free(inicio);
 	return 0;
 
 }
 
-static int sacAbrir(const char *path, struct fuse_file_info *fi) {
+static int sacAbrir(const char *ruta, struct fuse_file_info *fi) {
 
+	int tamanio = strlen(ruta);
+	soloRuta* inicio = malloc(sizeof(soloRuta));
+	memcpy(inicio->rutaDirectorio,ruta, tamanio);
+	SocketCommons_SendData(socketConectado, ABRIRDIR, inicio, sizeof(soloRuta));
+	free(inicio);
 	return 0;
 }
 
-static int sacLeer(const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *fi) {
-	printf( "--> Trying to read %s, %u, %u\n", path, offset, size );
+static int sacLeer(const char *ruta, char *buffer, size_t size, off_t offset, struct fuse_file_info *fi) {  //VER---------------
 
 
-	//memcpy( buffer, selectedText + offset, size );
-
-	//return strlen( selectedText ) - offset;
+	int tamanio = strlen(ruta);
+	soloRuta* inicio = malloc(sizeof(soloRuta));
+	memcpy(inicio->rutaDirectorio,ruta, tamanio);
+	SocketCommons_SendData(socketConectado, LEERFILE, inicio, sizeof(soloRuta));
+	free(inicio);
 
 	return 0;
 }
 
 int sacCrear(const char ruta, mode_t mode, struct fuse_file_info *fi){
+	int tamanio = strlen(ruta);
+	soloRuta* inicio = malloc(sizeof(soloRuta));
+	memcpy(inicio->rutaDirectorio,ruta, tamanio);
+	SocketCommons_SendData(socketConectado, CREARFILE, inicio, sizeof(soloRuta));
+	free(inicio);
 	return 0;
 }
 
-int sacUnlink(const char *path){
+int sacUnlink(const char *ruta){
+	int tamanio = strlen(ruta);
+	soloRuta* inicio = malloc(sizeof(soloRuta));
+	memcpy(inicio->rutaDirectorio,ruta, tamanio);
+	SocketCommons_SendData(socketConectado, BORRARFILE, inicio, sizeof(soloRuta));
+	free(inicio);
 	return 0;
 }
 
-int sacEscribir (const char path, const char data, size_t size, off_t offset, struct fuse_file_info *fi) {
+int sacEscribir (const char ruta, const char data, size_t size, off_t offset, struct fuse_file_info *fi) {
 	return 0;
 }
 
@@ -164,7 +183,11 @@ int main(int argc, char *argv[]) {
 
 	puerto = config_get_string_value(fuseConfig, "LISTEN_PORT");
 
+	socketConectado = SocketClient_ConnectToServer(puerto);
 /*
+
+	//------------------------FUSE----------------------------//
+
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
 	// Limpio la estructura que va a contener los parametros
@@ -188,16 +211,20 @@ int main(int argc, char *argv[]) {
 	// de realizar el montaje, comuniscarse con el kernel, delegar todo
 	// en varios threads
 	return fuse_main(args.argc, args.argv, &sacOperaciones, NULL);
-
 */
-	socketConectado = SocketClient_ConnectToServer(puerto);
+
+
 /*
+*/
+
 	int algo;
-	char* ruta = "/PrimerDirectorio/SegundoDirectorio/TercerDirectorio/PasaPorElSocketPorFavorC";
+	char* ruta = "/PrimerDirectorio/SegundoDirectorio/TercerDirectorio/PasaPorElSocketPorFavor";
 	algo = sacMkdir(ruta, S_IFDIR);
-	algo = sacRmdir(ruta);
+	//algo = sacRmdir(ruta);
 
 	config_destroy(fuseConfig);
+
+/*
 */
 	return 0;
 }

@@ -126,7 +126,7 @@ int main(){
 
 	cargarAlmacenamiento();
 
-
+/*
 	char* ruta = "/PrimerDirectorio/SegundoDirectorio/Prueba.txt";
 	char* ruta2 = "/PrimerDirectorio/SegundoDirectorio/TercerDirectorio/Prueba.txt";
 	char* ruta4 = "/PrimerDirectorio/SegundoDirectorio/OtroDir";
@@ -158,10 +158,11 @@ int main(){
 	archivoNuevo(nombre2,prueba2,largoPrueba2,3);
 	archivoNuevo(nombre1,prueba,largoPrueba,2);
 */
-
+/*
 	int tablaArch = 0;
 	tablaArch = localizarTablaArchivo(ruta);
 	printf("La tabla del archivo %s es la: %d .\n", ruta, tablaArch);
+*/
 /*
 	tablaArch = localizarTablaArchivo(ruta2);
 	printf("La tabla del archivo %s es la: %d .\n", ruta2, tablaArch);
@@ -181,12 +182,14 @@ int main(){
 	free(lectura);
 */
 
-
-	//CommandInterpreter_Init();
-
 	//iniciarServer();
 	//apagarServer();
 	//descargarAlmacenamiento();
+
+	int largo = 0;
+
+	largo = strlen((char*) mapTablas);
+	printf("%s .\n",largo);
 
 	return 0;
 }

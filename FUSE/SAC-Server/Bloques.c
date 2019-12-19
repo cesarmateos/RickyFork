@@ -48,8 +48,15 @@ uint32_t contadorBloquesLibres(void){
 	return largoBitmap - contador;
 }
 
-int bloquesNecesarios(uint32_t tamanio){
+uint32_t bloquesNecesarios(uint32_t tamanio){
 	return ceil( (tamanio + 0.0 ) /BLOCKSIZE);
+}
+
+uint32_t bloquesOcupados(uint32_t tamanio){
+	uint32_t bloquesNecesariosDatos = bloquesNecesarios(tamanio);
+	uint32_t bloquesNecesariosIndirectos = ceil( bloquesNecesariosDatos / 1024.0 );
+	uint32_t bloquesNecesariosTotales = bloquesNecesariosDatos + bloquesNecesariosIndirectos;
+	return bloquesNecesariosTotales;
 }
 
 void sincronizarBitArray(void){

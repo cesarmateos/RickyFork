@@ -8,18 +8,19 @@
 #ifndef SAC_SERVER_H_
 #define SAC_SERVER_H_
 
-#define FUSE_USE_VERSION 26
-
 #include "Tablas.h"
 
+#define FUSE_USE_VERSION 26
 
 void archivoNuevo(char* nombre, void* datos, uint32_t tamanio, nroTabla padre);
 void* leerArchivo(char* ruta);
 void borrarArchivo(char* ruta);
+void escribirArchivo(char* nombre, void*datos);
 
 void crearDirectorio(char* ruta);
 char** leerDirectorio(char* ruta);
 void borrarDirectorio(char* ruta);
+void borrarDirectorioVacio(char* ruta);
 
 void renombrar(char* ruta, char* nuevoNombre);
 
