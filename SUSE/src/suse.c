@@ -40,11 +40,15 @@ static sem_t sem;
 //estructuras a ser utilizadas en suse
 
 static int i =0;
-
+t_list* listaProgramas;
+t_list* blockeados;
+t_list* new;
+t_list* listaSemaforos;
 
 void iniciarLog(void){
 	Logger_CreateLog("SUSE.log","SUSE",true);
 }
+
 //carga de los semaforos de suse
 t_list* cargarsemaforos(int size){
 	t_config* suseconfig = config_create("suse.config");
@@ -66,6 +70,7 @@ t_list* cargarsemaforos(int size){
 	free(valoresiniciales);
 	return listaDeSemaforos;
 }
+
 //inicializacion de programa
 T_programa crearPrograma(int identificador,int numerodeprograma){
 	T_programa programa;
@@ -97,7 +102,10 @@ void cargarhiloAnew(T_hilo* hilo,t_list* new){
 }
 //devuelve el proximo hilo a ejecutar
 T_hilo* proximoHiloAejecutar(T_programa* programa){
-	return list_get(programa->ready,0);
+	T_hilo* hilo =list_get(programa->ready,0);
+	Logger_Log(LOG_INFO,"se devuelve el hilo %d\n",hilo->identificador);
+	return hilo;
+
 }
 
 bool sjf(T_hilo* hiloA,T_hilo* hiloB){
@@ -111,7 +119,7 @@ bool sjf(T_hilo* hiloA,T_hilo* hiloB){
 //se carga un programa en la lisat de programas
 void CargarPrograma(T_programa* programa,t_list* lista){
 		list_add(lista,programa);
-		Logger_Log(LOG_INFO,"se cargo el programa %d",programa->numeroDePrograma);
+		Logger_Log(LOG_INFO,"se cargo el programa %d",programa->identificador);
 }
 // pasaje de un hilo a estado de bloqueado se saca del estado exec y se pasa a bloqueado se calcula el tiempo que estuvo ejecutando para elc alculo del sjf
 void bloquearHilo(T_programa* programa,t_list* blockeado){
@@ -183,10 +191,9 @@ void decrementarSemaforo(T_semaforo* sem,T_hilo* hilo,t_list* bloqueado,t_list* 
 }
 
 void alrecibirPaquete(int socketID, int messageType, void* actualData){
-	t_list* listaProgramas = list_create();
-	t_list* blockeados = list_create();
+	/*t_list* blockeados = list_create();
 	t_list* new = list_create();
-	t_list* lista = cargarsemaforos(2);
+	t_list* lista = cargarsemaforos(2);*/
 	switch (messageType){
 	case INICIAR:
 	{
@@ -200,12 +207,12 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	}
 	case CARGARHILO:
 	{
-		/*int* a = SocketCommons_ReceiveData(socketID,CARGARHILO,NULL);
-		T_hilo hilo = crearHilo(a,socketID,0);
+		T_programa* programa = list_get(listaProgramas,0);
+		Logger_Log(LOG_INFO,"se cargo el programa %d\n",programa->identificador);
+		T_hilo hilo = crearHilo((int*)actualData,socketID,0);
 		cargarhiloAnew(&hilo,new);
-		cargarhilos(new,listaProgramas);*/
-		actualData = SocketCommons_ReceiveDataWithoutHeader(socketID,4,NULL);
-		printf("%d\n",(int*)actualData);
+		cargarhilos(new,listaProgramas);
+
 		break;
 	}
 	case PROXIMOHILOAEJECUTAR:
@@ -235,7 +242,7 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	}
 }
 void alRecibirConexion(int socketID){
-	printf("Conexion entrante en %d \n",socketID);
+	//t_list* listaProgramas = list_create();
 	T_programa programa = crearPrograma(socketID,i);
 	CargarPrograma(&programa,listaProgramas);
 }
@@ -246,9 +253,16 @@ void iniciarServidor(){
 	evento->OnPacketArrived = alrecibirPaquete;
 	SocketServer_ListenForConnection(*evento);
 }
+void iniciarListas(){
+	listaProgramas = list_create();
+	blockeados = list_create();
+	new = list_create();
+	//listaSemaforos = cargarsemaforos(2);
+}
 
 int main() {
 	iniciarLog();
+	iniciarListas();
 	t_config* suseconfig = config_create("suse.config");
 	int nivelDeMultiprogramacion = config_get_int_value(suseconfig,"MAX_MULTIPROG");
 	sem_init(&sem,1,nivelDeMultiprogramacion);
