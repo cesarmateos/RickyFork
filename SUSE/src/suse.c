@@ -157,6 +157,8 @@ void cargarhilos(t_list* new,t_list* listaProgramas){
 		T_programa* programa = encontrarPrograma(hiloAagregar->pid,listaProgramas);
 		Logger_Log(LOG_INFO,"se cargo el hilo %d en el programa %d\n",hiloAagregar->identificador,programa->numeroDePrograma);
 		list_add(programa->ready,hiloAagregar);
+		if(list_size(programa->ready) > 2)
+			list_sort(programa->ready,sjf);
 	}
 }
 
@@ -207,8 +209,8 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	}
 	case CARGARHILO:
 	{
-		T_programa* programa = list_get(listaProgramas,0);
-		Logger_Log(LOG_INFO,"se cargo el programa %d\n",programa->identificador);
+		T_programa programa = crearPrograma(socketID,i);
+		list_add(listaProgramas,&programa);
 		T_hilo hilo = crearHilo((int*)actualData,socketID,0);
 		cargarhiloAnew(&hilo,new);
 		cargarhilos(new,listaProgramas);
@@ -237,6 +239,8 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	}
 	case ELIMINAR:
 	{
+		T_programa* programa = encontrarPrograma(socketID,listaProgramas);
+		programa->exec = NULL;
 		break;
 	}
 	}
