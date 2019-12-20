@@ -40,6 +40,8 @@ static sem_t sem;
 //estructuras a ser utilizadas en suse
 
 static int i =0;
+
+
 void iniciarLog(void){
 	Logger_CreateLog("SUSE.log","SUSE",true);
 }
@@ -109,7 +111,7 @@ bool sjf(T_hilo* hiloA,T_hilo* hiloB){
 //se carga un programa en la lisat de programas
 void CargarPrograma(T_programa* programa,t_list* lista){
 		list_add(lista,programa);
-		Logger_Log(LOG_INFO,"se cargo el programa %d",programa->identificador);
+		Logger_Log(LOG_INFO,"se cargo el programa %d",programa->numeroDePrograma);
 }
 // pasaje de un hilo a estado de bloqueado se saca del estado exec y se pasa a bloqueado se calcula el tiempo que estuvo ejecutando para elc alculo del sjf
 void bloquearHilo(T_programa* programa,t_list* blockeado){
@@ -188,6 +190,8 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	switch (messageType){
 	case INICIAR:
 	{
+		ContentHeader* header = SocketCommons_ReceiveHeader(socketID,NULL);
+		int* a = SocketCommons_ReceiveData(socketID,INICIAR,NULL);
 		T_programa programa = crearPrograma(socketID,i);
 		CargarPrograma(&programa,listaProgramas);
 		printf("hola");
@@ -196,9 +200,12 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	}
 	case CARGARHILO:
 	{
-		T_hilo hilo = crearHilo(actualData,socketID,0);
+		/*int* a = SocketCommons_ReceiveData(socketID,CARGARHILO,NULL);
+		T_hilo hilo = crearHilo(a,socketID,0);
 		cargarhiloAnew(&hilo,new);
-		cargarhilos(new,listaProgramas);
+		cargarhilos(new,listaProgramas);*/
+		actualData = SocketCommons_ReceiveDataWithoutHeader(socketID,4,NULL);
+		printf("%d\n",(int*)actualData);
 		break;
 	}
 	case PROXIMOHILOAEJECUTAR:
@@ -227,9 +234,15 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	}
 	}
 }
+void alRecibirConexion(int socketID){
+	printf("Conexion entrante en %d \n",socketID);
+	T_programa programa = crearPrograma(socketID,i);
+	CargarPrograma(&programa,listaProgramas);
+}
 void iniciarServidor(){
 	SocketServer_Start("SUSE",3801);
 	SocketServer_ActionsListeners* evento = malloc(sizeof(SocketServer_ActionsListeners));
+	evento->OnClientConnected = alRecibirConexion;
 	evento->OnPacketArrived = alrecibirPaquete;
 	SocketServer_ListenForConnection(*evento);
 }
@@ -240,47 +253,9 @@ int main() {
 	int nivelDeMultiprogramacion = config_get_int_value(suseconfig,"MAX_MULTIPROG");
 	sem_init(&sem,1,nivelDeMultiprogramacion);
 	iniciarServidor();
-	/*switch(messageType){
-		case 1:
-		{
-			//T_programa programa = crearPrograma(socket,i);
-			//CargarPrograma(&programa,listaPrograma);
-			break;
-		}
-		case 2:
-		{
-			//T_hilo hilo = crearHilo(0,socket,0);
-			//cargarhiloAnew(&hilo,new);
-			//cargarhilos(new,listaPrograma);
-			break;
-		}
-		case 3:
-		{
-			//proximohiloAejecutar()
-			break;
-		}
-		case 4:
-		{
-			//incrementarsemaforo
-			break;
-		}
-		case 5:
-		{
-			//decrementarsemaforo
-			break;
-		}
-		case 6:
-		{
-			//bloquearhilo
-			break;
-		}
-		case 7:
-		{
-			//eliminarhilo
-			break;
-		}
-		}
-    T_programa programa = crearPrograma(1);
+
+
+    /*T_programa programa = crearPrograma(1);
 	T_programa programa2 = crearPrograma(2);
 	CargarPrograma(&programa,listaPrograma);
 	CargarPrograma(&programa2,listaPrograma);
