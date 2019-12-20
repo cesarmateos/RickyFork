@@ -138,5 +138,15 @@ void tablaOFF(char* ruta){
 	tabla.state = 0;
 }
 
+void librearPunterosABloques(GFile tabla, int primerPosicion){
+	int i = primerPosicion;
+	uint32_t bloqueIndirecto = 0;
+	while(tabla.blk_indirect[i] > 0 && i < BLKINDIRECT){
+		bloqueIndirecto = tabla.blk_indirect[i];
+		liberarBloqueIndirecto(bloqueIndirecto);
+		tabla.blk_indirect[i] = 0;
+		i++;
+	}
+}
 
 

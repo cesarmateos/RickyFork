@@ -19,3 +19,5 @@ void sincronizarTabla(void);
 void separar(char*ruta, char* sobrante, char* extracto);
 
 void tablaOFF(char* ruta);
+
+void librearPunterosABloques(GFile tabla, int primerPosicion);

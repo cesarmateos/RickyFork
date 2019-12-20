@@ -15,7 +15,7 @@
 void archivoNuevo(char* nombre, void* datos, uint32_t tamanio, nroTabla padre);
 void* leerArchivo(char* ruta);
 void borrarArchivo(char* ruta);
-void escribirArchivo(char* nombre, void*datos);
+void escribirArchivo(char* ruta, size_t tamanio,  off_t offset, void*datos);
 
 void crearDirectorio(char* ruta);
 char** leerDirectorio(char* ruta);

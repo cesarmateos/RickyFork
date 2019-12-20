@@ -1,4 +1,4 @@
-#include"SAC.h"
+#include "Operaciones.h"
 
 void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, nroTabla padre){
 
@@ -86,22 +86,7 @@ void borrarArchivo(char* ruta){
 		nroTabla numeroTabla = localizarTablaArchivo(ruta);
 		GFile tabla = devolverTabla(numeroTabla);
 		tabla.state = 0;
-		int i = 0;
-		uint32_t bloqueIndirecto = 0;
-		uint32_t bloqueDatos = 0;
-		ptrGBloque* arrayPunterosABloques = calloc(GFILEBYTABLE,sizeof(ptrGBloque));
-
-		while(tabla.blk_indirect[i] && i < BLKINDIRECT){
-			bloqueIndirecto = tabla.blk_indirect[i];
-			leerBloque(bloqueIndirecto,arrayPunterosABloques);
-			int j = 0;
-			while( *(arrayPunterosABloques + j) ){
-				bloqueDatos = *(arrayPunterosABloques + j);
-				bitarray_clean_bit(mapBitmap, bloqueDatos);
-				j++;
-			}
-			i++;
-		}
+		liberarPunterosABloques(tabla,0);
 	}else{
 		Logger_Log(LOG_ERROR, "No existe %s.", ruta);
 	}
@@ -150,18 +135,67 @@ void* leerArchivo(char* ruta){
 		return -1;
 	}
 }
-void escribirArchivo(char* ruta, uint32_t tamanio, void*datos){
+
+void escribirArchivo(char* ruta, size_t tamanio,  off_t offset, void*datos){
 	if(existe(ruta)){
-		GFile tabla = localizarTablaArchivo(ruta);
+		nroTabla numeroTabla = localizarTablaArchivo(ruta);
+		GFile tabla = devolverTabla(numeroTabla);
+
 		uint32_t tamanioAnterior = tabla.file_size;
 		uint32_t bloquesUsados = bloquesOcupados(tamanioAnterior);
-		uint32_t bloquesNecesariosDatos = bloquesNecesarios(tamanio);
+
+		uint32_t bloquesNecesariosDatos = bloquesNecesarios( tamanio + offset);
 		uint32_t bloquesNecesariosIndirectos = ceil( bloquesNecesariosDatos / 1024.0 );
 		uint32_t bloquesNecesariosTotales = bloquesNecesariosDatos + bloquesNecesariosIndirectos;
 		uint32_t bloquesDisponibles = contadorBloquesLibres();
+
 		if( bloquesNecesariosTotales > (bloquesDisponibles + bloquesUsados) ){
 			Logger_Log(LOG_ERROR, "No hay espacio suficiente para guardar los cambios en el archivo %s.", ruta);
 		}else{
+			ptrGBloque primerBloque = 0;
+			int* posicionPunterosTabla = malloc(sizeof(int));
+			int* posicionPunterosIndirectos = malloc(sizeof(int));
+			void* segmentoDatos = malloc(BLOCKSIZE);
+			void* datosPrimerBloque = malloc(BLOCKSIZE);
+			int* offsetBloque = malloc(BLOCKSIZE);
+			int restoBloque = 0;
+			uint32_t bloquesDatosAcumulados = 0; //(i * 1024) + j ;
+			ptrGBloque* arrayPunterosABloques = calloc(GFILEBYTABLE,sizeof(ptrGBloque));
+			uint32_t bloqueIndirecto = 0;
+
+
+			primerBloque = buscarBloqueOffset(tabla,posicionPunterosTabla,posicionPunterosIndirectos,offset,offsetBloque);	// Busco hasta que bloque no se modifica nada
+			restoBloque = BLOCKSIZE - *offsetBloque;  																		// Calculo cuanto me falta para llenar el primer bloque
+
+			//Llenamos el bloque correspondiente al offset//
+			leerBloque(primerBloque,datosPrimerBloque);
+			memcpy(datosPrimerBloque + *offsetBloque, datos,restoBloque);
+			escribirBloque(primerBloque,datosPrimerBloque);
+			free(datosPrimerBloque);
+
+			//Llenamos los bloques apuntados por el pirmer bloque indirecto//
+			bloqueIndirecto =  tabla.blk_indirect[*posicionPunterosTabla];
+			leerBloque(bloqueIndirecto,arrayPunterosABloques);
+			int i = (*posicionPunterosIndirectos) + 1;
+			int j = (*posicionPunterosTabla) + 1;
+
+			bloquesDatosAcumulados = ((*posicionPunterosTabla) * GFILEBYTABLE) + j ;		//Calculo cuantos bloques de los necesarios ya fueron llenados.
+
+			int bloquesAcumuladosNuevos = 0;
+
+			while( i < 1024 && (bloquesDatosAcumulados < bloquesNecesariosDatos)){
+				memset(segmentoDatos,0,BLOCKSIZE);
+				memcpy(segmentoDatos,(datos + (bloquesAcumuladosNuevos* BLOCKSIZE) + restoBloque),BLOCKSIZE);
+				escribirBloque(*(arrayPunterosABloques + i),segmentoDatos);
+				bloquesDatosAcumulados++;
+				bloquesAcumuladosNuevos++;
+				i++;
+			}
+
+			//Borro bloques a ser pisados
+			librearPunterosABloques(tabla, j);
+
+			llenarBloques(void* datos, tabla, uint32_t tamanio, j);
 
 		}
 	}else{
@@ -298,6 +332,42 @@ bool existe(char* ruta){
 	return true;
 }
 
+void llenarBloques(void* datos, GFile tabla, uint32_t tamanio, int pirmerPunteroTabla){
+	uint32_t bloquesNecesariosDatos = bloquesNecesarios(tamanio);
+	uint32_t bloquesAcumulados = 0;
+	ptrGBloque bloqueIndirecto = 0;
+	ptrGBloque bloqueDatos = 0;
+	int i = pirmerPunteroTabla;
+	int j = 0;
+	ptrGBloque* arrayPunterosABloques = calloc(GFILEBYTABLE,sizeof(ptrGBloque));
+	void* segmentoDatos = malloc(BLOCKSIZE);
 
+	//Limpio el resto de los punteros de la tabla por las dudas.
+	for(int h = pirmerPunteroTabla ; h < 1000; h++){
+		tabla.blk_indirect[h] = 0;
+	}
 
+	//Guardo Datos
+	while(bloquesAcumulados < bloquesNecesariosDatos && i < 1000){
+		j = 0;
+		bloqueIndirecto = tabla.blk_indirect[i];
+		while(bloquesAcumulados < bloquesNecesariosDatos && j < 1024){
 
+			bloqueDatos = buscarBloqueDisponible();										// Busco bloque disponible
+			*(arrayPunterosABloques + j) =  bloqueDatos;								// Guardo en en array de punteros a bloques el numero de bloque a apuntar
+			bitarray_set_bit(mapBitmap,bloqueDatos);									// Reservo el bloque en el bitmap
+			memset(segmentoDatos,0,BLOCKSIZE);											// Limpio la memoria para que no me queden pegados residuos.
+			memcpy(segmentoDatos,(datos + (bloquesAcumulados* BLOCKSIZE)),BLOCKSIZE);	// Copio eltamaño de un bloque, desde la zona del archivo correspondiente al bloque actual
+			escribirBloque(bloqueDatos,segmentoDatos);									// Guardo Segmento en el bloque
+
+			bloquesAcumulados++;
+			j++;
+		}
+		escribirBloque(bloqueIndirecto,arrayPunterosABloques);
+		memset(arrayPunterosABloques,0,sizeof(arrayPunterosABloques));					//Limpio array por las dudas
+		i++;
+	}
+	free(arrayPunterosABloques);
+	free(segmentoDatos);
+
+}

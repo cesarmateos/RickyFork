@@ -63,9 +63,50 @@ void sincronizarBitArray(void){
 	msync(mapBitmap,largoBitmap,MS_SYNC);
 }
 
+ptrGBloque buscarBloqueOffset(GFile tabla, int* posicionPunterosTabla, int*posicionPunterosIndirectos, off_t offset, int* offsetBloque){
+	ptrGBloque bloqueDatos = 0;
+	ptrGBloque bloqueIndirecto = 0 ;
+	ptrGBloque* arrayPunterosABloques = calloc(GFILEBYTABLE,sizeof(ptrGBloque));
+	int bytesDatosXBloqueIndirecto = 0;
+	uint32_t bytesPreviosOffset = 0;
+	uint32_t bytesBloquesPunterosIndirectos = 0;
+
+	bytesDatosXBloqueIndirecto = GFILEBYTABLE * BLOCKSIZE;
+	bytesPreviosOffset = sizeof(off_t) *offset;
+
+	*posicionPunterosTabla = ceil (bytesPreviosOffset /  (bytesDatosXBloqueIndirecto + 0.0) );
+	bloqueIndirecto =  tabla.blk_indirect[*posicionPunterosTabla];
+
+	bytesBloquesPunterosIndirectos = bytesPreviosOffset %  bytesDatosXBloqueIndirecto;
+	*posicionPunterosIndirectos = ceil(bytesBloquesPunterosIndirectos / BLOCKSIZE );
 
 
+	leerBloque(bloqueIndirecto,arrayPunterosABloques);
+	bloqueDatos = *(arrayPunterosABloques + *posicionPunterosIndirectos);
+	free(arrayPunterosABloques);
 
+	*offsetBloque = bytesBloquesPunterosIndirectos % BLOCKSIZE ;
+
+	return bloqueDatos;
+}
+
+void liberarBloqueIndirecto(ptrGBloque bloqueIndirecto){
+	liberarPunterosBloquesDatos(bloqueIndirecto,0);
+	borrarBloque(bloqueIndirecto);
+}
+
+void liberarPunterosBloquesDatos(ptrGBloque bloqueIndirecto, int primerPuntero){
+	ptrGBloque* arrayPunterosABloques = calloc(GFILEBYTABLE,sizeof(ptrGBloque));
+	leerBloque(bloqueIndirecto,arrayPunterosABloques);
+	uint32_t bloqueDatos = 0;
+	int j = primerPuntero;
+	while( *(arrayPunterosABloques + j) > 0 && j < GFILEBYTABLE){
+		bloqueDatos = *(arrayPunterosABloques + j);
+		borrarBloque(bloqueDatos);
+		j++;
+	}
+	free(arrayPunterosABloques);
+}
 
 
 
