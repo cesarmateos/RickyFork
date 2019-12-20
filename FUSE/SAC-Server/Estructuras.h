@@ -61,7 +61,13 @@ typedef struct sac_file_t { // un cuarto de bloque (256 bytes)
 
 typedef struct{
 	rutaArchivo rutaDirectorio;
-}soloRuta;
+}SoloRuta;
+
+typedef struct{
+	rutaArchivo rutaDirectorio;
+	size_t size;
+	off_t offset;
+}Escribir;
 
 uint32_t *bloquesDatos;
 uint32_t largoBitmap;

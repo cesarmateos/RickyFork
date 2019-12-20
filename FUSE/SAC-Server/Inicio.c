@@ -182,14 +182,10 @@ int main(){
 	free(lectura);
 */
 
-	//iniciarServer();
+	iniciarServer();
 	//apagarServer();
 	//descargarAlmacenamiento();
 
-	int largo = 0;
-
-	largo = strlen((char*) mapTablas);
-	printf("%s .\n",largo);
 
 	return 0;
 }

@@ -1,5 +1,7 @@
 #include "Tablas.h"
 
+size_t bytesPorBloqueDePunteros = 1024 * BLOCKSIZE;
+
 void mapearTablas(void){
 	//mapTablas = calloc(GFILEBYTABLE, sizeof(GFile));
 	mapTablas = (void*) mmap(NULL,(GFILEBYTABLE * sizeof(GFile)) ,PROT_READ|PROT_WRITE,MAP_SHARED,disco, (inicioTablas *BLOCKSIZE) );
@@ -149,4 +151,28 @@ void librearPunterosABloques(GFile tabla, int primerPosicion){
 	}
 }
 
+void llenarPunterosABloques(GFile tabla, int primerPosicion,void* datos, size_t tamanio){
+	int i = primerPosicion;
+	int punterosLlenados = 0;
+	size_t resto = tamanio;
+	size_t tamanioSegmento = 0;
+	ptrGBloque bloqueDePunteros = 0;
+	void* segmento = malloc(bytesPorBloqueDePunteros);
+	while(resto > 0){
+		if(resto < bytesPorBloqueDePunteros){
+			tamanioSegmento = resto;
+		}else{
+			tamanioSegmento = bytesPorBloqueDePunteros;
+		}
+		bloqueDePunteros = buscarBloqueDisponible();
+		ocuparBloque(bloqueDePunteros);
+		tabla.blk_indirect[i] = bloqueDePunteros;
+		memcpy(segmento, datos + (punterosLlenados * bytesPorBloqueDePunteros),tamanioSegmento);
+		llenarPunterosBloquesDatos(bloqueDePunteros, 0, segmento, tamanioSegmento);
+		punterosLlenados++;
+		i++;
+		resto -= tamanioSegmento;
+	}
+	free(segmento);
+}
 

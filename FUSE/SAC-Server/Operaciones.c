@@ -12,7 +12,7 @@ void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, nroTabla padre){
 		Logger_Log(LOG_ERROR, "No se pueden crear mas archivos.");
 	}else{
 
-		uint32_t bloquesNecesariosDatos = bloquesNecesarios(tamanio);
+		uint32_t bloquesNecesariosDatos = bloquesDatosNecesarios(tamanio);
 		uint32_t bloquesNecesariosIndirectos = ceil( bloquesNecesariosDatos / 1024.0 );
 		uint32_t bloquesNecesariosTotales = bloquesNecesariosDatos + bloquesNecesariosIndirectos;
 		uint32_t bloquesDisponibles = contadorBloquesLibres();
@@ -81,12 +81,41 @@ void archivoNuevo(char* nombre, void*datos, uint32_t tamanio, nroTabla padre){
 	//sincronizarBitArray();
 }
 
+int ArchivoNuevoVacio(char* ruta){
+	nroTabla numeroTablaAUsar = 0;
+	GFile tabla;
+	numeroTablaAUsar = buscarTablaDisponible();
+
+	if(numeroTablaAUsar == -1){
+		Logger_Log(LOG_ERROR, "No se pueden crear mas archivos.");
+		return -1;
+	}else{
+		time_t fechaActual;
+		fechaActual = time(NULL);
+		char* sobrante = malloc(sizeof(rutaArchivo));
+		char* extracto = malloc(sizeof(nombreArchivo));
+		separar(ruta, sobrante, extracto);
+		int padre = localizarTablaArchivo(ruta);
+		if(padre < 0){
+			Logger_Log(LOG_ERROR, "No existe la carpeta donde quiere crear al archivo.");
+			return -2;
+		}else{
+		tabla.state = 1;
+		strcpy(tabla.fname,extracto);
+		tabla.tablaPadre = padre;
+		tabla.c_date = fechaActual;
+		tabla.m_date = fechaActual;
+		return 1;
+		}
+	}
+}
+
 void borrarArchivo(char* ruta){
 	if(existe(ruta)){
 		nroTabla numeroTabla = localizarTablaArchivo(ruta);
 		GFile tabla = devolverTabla(numeroTabla);
 		tabla.state = 0;
-		liberarPunterosABloques(tabla,0);
+		librearPunterosABloques(tabla,0);
 	}else{
 		Logger_Log(LOG_ERROR, "No existe %s.", ruta);
 	}
@@ -103,7 +132,7 @@ void* leerArchivo(char* ruta){
 		numeroTabla = localizarTablaArchivo(ruta);
 		tabla = devolverTabla(numeroTabla);
 		tamanio = tabla.file_size ;
-		int bloquesALeer = bloquesNecesarios(tamanio);
+		int bloquesALeer = bloquesDatosNecesarios(tamanio);
 		void* datos = calloc(bloquesALeer,BLOCKSIZE);
 		void* datosTemporarios = malloc(BLOCKSIZE);
 
@@ -142,11 +171,8 @@ void escribirArchivo(char* ruta, size_t tamanio,  off_t offset, void*datos){
 		GFile tabla = devolverTabla(numeroTabla);
 
 		uint32_t tamanioAnterior = tabla.file_size;
-		uint32_t bloquesUsados = bloquesOcupados(tamanioAnterior);
-
-		uint32_t bloquesNecesariosDatos = bloquesNecesarios( tamanio + offset);
-		uint32_t bloquesNecesariosIndirectos = ceil( bloquesNecesariosDatos / 1024.0 );
-		uint32_t bloquesNecesariosTotales = bloquesNecesariosDatos + bloquesNecesariosIndirectos;
+		uint32_t bloquesUsados = bloquesOcupadosPorArchivo(tamanioAnterior);
+		uint32_t bloquesNecesariosTotales = bloquesOcupadosPorArchivo(tamanio + offset);
 		uint32_t bloquesDisponibles = contadorBloquesLibres();
 
 		if( bloquesNecesariosTotales > (bloquesDisponibles + bloquesUsados) ){
@@ -154,17 +180,18 @@ void escribirArchivo(char* ruta, size_t tamanio,  off_t offset, void*datos){
 		}else{
 			ptrGBloque primerBloque = 0;
 			int* posicionPunterosTabla = malloc(sizeof(int));
-			int* posicionPunterosIndirectos = malloc(sizeof(int));
+			int* posicionPunteroABloquesDatos = malloc(sizeof(int));
 			void* segmentoDatos = malloc(BLOCKSIZE);
 			void* datosPrimerBloque = malloc(BLOCKSIZE);
 			int* offsetBloque = malloc(BLOCKSIZE);
 			int restoBloque = 0;
-			uint32_t bloquesDatosAcumulados = 0; //(i * 1024) + j ;
+			uint32_t bloquesDatosAcumulados = 0;
 			ptrGBloque* arrayPunterosABloques = calloc(GFILEBYTABLE,sizeof(ptrGBloque));
 			uint32_t bloqueIndirecto = 0;
+			size_t restoDatos = tamanio;
 
 
-			primerBloque = buscarBloqueOffset(tabla,posicionPunterosTabla,posicionPunterosIndirectos,offset,offsetBloque);	// Busco hasta que bloque no se modifica nada
+			primerBloque = buscarBloqueOffset(tabla,posicionPunterosTabla,posicionPunteroABloquesDatos,offset,offsetBloque);	// Busco hasta que bloque no se modifica nada
 			restoBloque = BLOCKSIZE - *offsetBloque;  																		// Calculo cuanto me falta para llenar el primer bloque
 
 			//Llenamos el bloque correspondiente al offset//
@@ -172,31 +199,43 @@ void escribirArchivo(char* ruta, size_t tamanio,  off_t offset, void*datos){
 			memcpy(datosPrimerBloque + *offsetBloque, datos,restoBloque);
 			escribirBloque(primerBloque,datosPrimerBloque);
 			free(datosPrimerBloque);
+			free(offsetBloque);
+			restoDatos -= restoBloque;
 
-			//Llenamos los bloques apuntados por el pirmer bloque indirecto//
+
 			bloqueIndirecto =  tabla.blk_indirect[*posicionPunterosTabla];
 			leerBloque(bloqueIndirecto,arrayPunterosABloques);
-			int i = (*posicionPunterosIndirectos) + 1;
+			int i = (*posicionPunteroABloquesDatos) + 1;
 			int j = (*posicionPunterosTabla) + 1;
 
-			bloquesDatosAcumulados = ((*posicionPunterosTabla) * GFILEBYTABLE) + j ;		//Calculo cuantos bloques de los necesarios ya fueron llenados.
-
-			int bloquesAcumuladosNuevos = 0;
-
-			while( i < 1024 && (bloquesDatosAcumulados < bloquesNecesariosDatos)){
-				memset(segmentoDatos,0,BLOCKSIZE);
-				memcpy(segmentoDatos,(datos + (bloquesAcumuladosNuevos* BLOCKSIZE) + restoBloque),BLOCKSIZE);
-				escribirBloque(*(arrayPunterosABloques + i),segmentoDatos);
-				bloquesDatosAcumulados++;
-				bloquesAcumuladosNuevos++;
-				i++;
-			}
-
-			//Borro bloques a ser pisados
+			//Liberamos el resto del archivo a pisar
+			liberarPunterosBloquesDatos(bloqueIndirecto, i);
 			librearPunterosABloques(tabla, j);
 
-			llenarBloques(void* datos, tabla, uint32_t tamanio, j);
 
+			size_t tamanioSementoBloques = 0;
+			int bloquesAcumulados = 0;
+			ptrGBloque bloqueDatos = 0;
+
+			while(restoDatos > 0 || i < 1024){
+				if(restoDatos < BLOCKSIZE){
+					tamanioSementoBloques = restoDatos;
+				}else{
+					tamanioSementoBloques = BLOCKSIZE;
+				}
+				bloqueDatos = buscarBloqueDisponible();																// Busco bloque disponible
+				*(arrayPunterosABloques + i) =  bloqueDatos;														// Guardo en en array de punteros a bloques el numero de bloque a apuntar
+				ocuparBloque(bloqueDatos);																			// Reservo el bloque en el bitmap
+				memset(segmentoDatos,0,BLOCKSIZE);																	// Limpio la memoria para que no me queden pegados residuos.
+				memcpy(segmentoDatos,(datos + (bloquesAcumulados* BLOCKSIZE) +restoBloque),tamanioSementoBloques);	// Copio eltamaño de un bloque, desde la zona del archivo correspondiente al bloque actual
+				escribirBloque(bloqueDatos,segmentoDatos);
+				restoDatos -= tamanioSementoBloques;
+				bloquesAcumulados++;
+				i++;
+			}
+			llenarPunterosABloques(tabla, j , (datos + (bloquesAcumulados* BLOCKSIZE) +restoBloque) , restoDatos);
+			free(segmentoDatos);
+			free(arrayPunterosABloques);
 		}
 	}else{
 		Logger_Log(LOG_ERROR, "El archivo %s no existe.", ruta);
@@ -333,7 +372,7 @@ bool existe(char* ruta){
 }
 
 void llenarBloques(void* datos, GFile tabla, uint32_t tamanio, int pirmerPunteroTabla){
-	uint32_t bloquesNecesariosDatos = bloquesNecesarios(tamanio);
+	uint32_t bloquesNecesariosDatos = bloquesDatosNecesarios(tamanio);
 	uint32_t bloquesAcumulados = 0;
 	ptrGBloque bloqueIndirecto = 0;
 	ptrGBloque bloqueDatos = 0;

@@ -24,36 +24,36 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 			char** ls = malloc(sizeof(rutaArchivo));
 			ls = leerDirectorio(actualData);
 			printf("Se leyó el directorio %s :", ls);
-			//SocketCommons_SendData(sock,);
+			SocketCommons_SendData(sock,LISTADOARCHIVOS,ls,10000); //SACAR EL HARDCODEO
 			break;
 		}
 		case CREARDIR:
 		{
-			crearDirectorio( ((soloRuta*)actualData)->rutaDirectorio);
+			crearDirectorio( ((SoloRuta*)actualData)->rutaDirectorio);
 			free(actualData); //??
 			break;
 		}
 		case BORRARDIR:
 		{
-			borrarDirectorioVacio( ((soloRuta*)actualData)->rutaDirectorio);
+			borrarDirectorioVacio( ((SoloRuta*)actualData)->rutaDirectorio);
 			break;
 		}
 		case ABRIRDIR:
 		{
-			bool respuesta = existe( ((soloRuta*)actualData)->rutaDirectorio);
+			bool respuesta = existe( ((SoloRuta*)actualData)->rutaDirectorio);
 			break;
 		}
 		case ATRIBUTOS:
 		{
 			GFile tabla;
-			nroTabla nroTabla = localizarTablaArchivo( ((soloRuta*)actualData)->rutaDirectorio);
+			nroTabla nroTabla = localizarTablaArchivo( ((SoloRuta*)actualData)->rutaDirectorio);
 			tabla = *(mapTablas + nroTabla);
 			//SocketCommons_SendData(sock,DEVUELVETABLA,tabla,sizeof(GFile));
 			break;
 		}
 		case ABRIRFILE:
 		{
-			bool respuesta = existe( ((soloRuta*)actualData)->rutaDirectorio);
+			bool respuesta = existe( ((SoloRuta*)actualData)->rutaDirectorio);
 			break;
 		}
 		case LEERFILE:
@@ -62,15 +62,21 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 		}
 		case CREARFILE:
 		{
+			int estado = ArchivoNuevoVacio(((SoloRuta*)actualData)->rutaDirectorio);
 			break;
 		}
 		case BORRARFILE:
 		{
-			borrarArchivo( ((soloRuta*)actualData)->rutaDirectorio);
+			borrarArchivo( ((SoloRuta*)actualData)->rutaDirectorio);
 			break;
 		}
 		case ESCRIBIRFILE:
 		{
+			Escribir* inicio = malloc(sizeof(Escribir));
+			memcpy(inicio,actualData,sizeof(Escribir));
+			void* datos = malloc(inicio->size);
+			memcpy(datos, (actualData+sizeof(Escribir)), inicio->size );
+			escribirArchivo(inicio->rutaDirectorio,inicio->size,inicio->offset,datos);
 			break;
 		}
 

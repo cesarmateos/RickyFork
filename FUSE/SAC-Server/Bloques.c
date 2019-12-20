@@ -1,5 +1,6 @@
 #include "Bloques.h"
 
+
 void mapearBitmap(void){
 	char* bitArrayTemp;
 	//mapBitmap = calloc(largoBitmap,sizeof(char));
@@ -26,6 +27,10 @@ void borrarBloque(uint32_t bloque){
 	bitarray_clean_bit(mapBitmap,bloque);
 }
 
+void ocuparBloque(uint32_t bloque){
+	bitarray_set_bit(mapBitmap,bloque);
+}
+
 ptrGBloque buscarBloqueDisponible(void){
 	ptrGBloque  indice = GFILEBYTABLE;
 	ptrGBloque  largoBitmap = bitarray_get_max_bit(mapBitmap);
@@ -48,15 +53,16 @@ uint32_t contadorBloquesLibres(void){
 	return largoBitmap - contador;
 }
 
-uint32_t bloquesNecesarios(uint32_t tamanio){
+uint32_t bloquesDatosNecesarios(size_t tamanio){
 	return ceil( (tamanio + 0.0 ) /BLOCKSIZE);
 }
 
-uint32_t bloquesOcupados(uint32_t tamanio){
-	uint32_t bloquesNecesariosDatos = bloquesNecesarios(tamanio);
-	uint32_t bloquesNecesariosIndirectos = ceil( bloquesNecesariosDatos / 1024.0 );
-	uint32_t bloquesNecesariosTotales = bloquesNecesariosDatos + bloquesNecesariosIndirectos;
-	return bloquesNecesariosTotales;
+uint32_t bloquesPunterosNecesarios(size_t tamanio){
+	return ceil( bloquesDatosNecesarios(tamanio) / 1024.0 );
+}
+
+uint32_t bloquesOcupadosPorArchivo(uint32_t tamanio){
+	return bloquesDatosNecesarios(tamanio) + bloquesPunterosNecesarios(tamanio);
 }
 
 void sincronizarBitArray(void){
@@ -108,7 +114,30 @@ void liberarPunterosBloquesDatos(ptrGBloque bloqueIndirecto, int primerPuntero){
 	free(arrayPunterosABloques);
 }
 
-
+void llenarPunterosBloquesDatos(ptrGBloque bloqueIndirecto, int primerPuntero, void* datos, size_t tamanio){
+	uint32_t bloquesAOcupar = bloquesDatosNecesarios(tamanio);
+	ptrGBloque* arrayPunterosABloques = calloc(GFILEBYTABLE,sizeof(ptrGBloque));
+	void* segmentoDatos = malloc(BLOCKSIZE);
+	leerBloque(bloqueIndirecto,arrayPunterosABloques);
+	ptrGBloque bloqueDatos = 0;
+	int tope = 0;
+	int bloquesAcumulados = 0;
+	if(bloquesAOcupar < GFILEBYTABLE){
+		tope = bloquesAOcupar;
+	}else{
+		tope = GFILEBYTABLE;
+	}
+	for(int j = primerPuntero; j < tope; j++ ){
+		bloqueDatos = buscarBloqueDisponible();										// Busco bloque disponible
+		*(arrayPunterosABloques + j) =  bloqueDatos;								// Guardo en en array de punteros a bloques el numero de bloque a apuntar
+		ocuparBloque(bloqueDatos);													// Reservo el bloque en el bitmap
+		memset(segmentoDatos,0,BLOCKSIZE);											// Limpio la memoria para que no me queden pegados residuos.
+		memcpy(segmentoDatos,(datos + (bloquesAcumulados* BLOCKSIZE)),BLOCKSIZE);	// Copio eltamaño de un bloque, desde la zona del archivo correspondiente al bloque actual
+		escribirBloque(bloqueDatos,segmentoDatos);									// Guardo Segmento en el bloque
+	}
+	free(arrayPunterosABloques);
+	free(segmentoDatos);
+}
 
 
 

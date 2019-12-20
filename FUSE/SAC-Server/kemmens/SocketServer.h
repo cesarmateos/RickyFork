@@ -11,6 +11,7 @@
 
 #define INIT_ACTION_LISTENER {0}
 
+int sock;
 
 /////---------ESTRUCTURAS Y VARIABLES GLOBALES---------/////
 

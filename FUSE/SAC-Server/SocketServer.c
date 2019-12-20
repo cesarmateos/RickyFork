@@ -15,7 +15,7 @@
 
 #define STDIN 0 //Input basico
 
-int sock = -1;
+sock = -1;
 int closeAll = 0;
 fd_set descriptores_clientes;
 

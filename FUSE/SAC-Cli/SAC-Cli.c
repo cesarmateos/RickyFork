@@ -9,9 +9,9 @@ int socketConectado;
 static int sacGetAttr(const char *ruta, struct stat *stbuf){
 
 	int tamanio = strlen(ruta);
-	soloRuta* inicio = malloc(sizeof(soloRuta));
+	SoloRuta* inicio = malloc(sizeof(SoloRuta));
 	memcpy(inicio->rutaDirectorio,ruta, tamanio);
-	SocketCommons_SendData(socketConectado, ATRIBUTOS, inicio, sizeof(soloRuta));
+	SocketCommons_SendData(socketConectado, ATRIBUTOS, inicio, sizeof(SoloRuta));
 	free(inicio);
 	GFile* tabla = malloc(sizeof(GFile));
 	tabla = SocketCommons_ReceiveData(socketConectado, DEVUELVETABLA, 0);
@@ -41,9 +41,9 @@ static int sacGetAttr(const char *ruta, struct stat *stbuf){
 
 int sacAbrirDirectorio(const char *dirName){
 	int tamanio = strlen(dirName);
-	soloRuta* inicio = malloc(sizeof(soloRuta));
+	SoloRuta* inicio = malloc(sizeof(SoloRuta));
 	memcpy(inicio->rutaDirectorio,dirName, tamanio);
-	SocketCommons_SendData(socketConectado, ABRIRDIR, inicio, sizeof(soloRuta));
+	SocketCommons_SendData(socketConectado, ABRIRDIR, inicio, sizeof(SoloRuta));
 	free(inicio);
 	return 0;
 }
@@ -58,15 +58,14 @@ static int sacLeerDir(const char *ruta, void *buffer, fuse_fill_dir_t filler, of
 	if (strcmp(ruta, "/") != 0)
 		return -ENOENT;
 
-	int tamanio = sizeof(rutaArchivo);
-
-	rutaArchivo* inicio = malloc(sizeof(rutaArchivo));
+	int tamanio = strlen(ruta);
+	SoloRuta* inicio = malloc(sizeof(SoloRuta));
+	memcpy(inicio->rutaDirectorio,ruta, tamanio);
+	SocketCommons_SendData(socketConectado, LEERDIR, inicio, sizeof(SoloRuta));
 
 	int* error_status = NULL;
 	nombreArchivo* listaDeArchivos;
 
-	SocketCommons_SendHeader(socketConectado,tamanio, LEERDIR);
-	SocketCommons_SendData(socketConectado, LEERDIR, inicio, tamanio);
 	free(inicio);
 	listaDeArchivos = SocketCommons_ReceiveData(socketConectado, LISTADOARCHIVOS, error_status);
 
@@ -83,9 +82,9 @@ static int sacLeerDir(const char *ruta, void *buffer, fuse_fill_dir_t filler, of
 int sacMkdir(const char *ruta, mode_t mode){
 
 	int tamanio = strlen(ruta);
-	soloRuta* inicio = malloc(sizeof(soloRuta));
+	SoloRuta* inicio = malloc(sizeof(SoloRuta));
 	memcpy(inicio->rutaDirectorio,ruta, tamanio);
-	SocketCommons_SendData(socketConectado, CREARDIR, inicio, sizeof(soloRuta));
+	SocketCommons_SendData(socketConectado, CREARDIR, inicio, sizeof(SoloRuta));
 	free(inicio);
 	return 0;
 
@@ -94,9 +93,9 @@ int sacMkdir(const char *ruta, mode_t mode){
 int sacRmdir(const char *ruta){
 
 	int tamanio = strlen(ruta);
-	soloRuta* inicio = malloc(sizeof(soloRuta));
+	SoloRuta* inicio = malloc(sizeof(SoloRuta));
 	memcpy(inicio->rutaDirectorio,ruta, tamanio);
-	SocketCommons_SendData(socketConectado, BORRARDIR, inicio, sizeof(soloRuta));
+	SocketCommons_SendData(socketConectado, BORRARDIR, inicio, sizeof(SoloRuta));
 	free(inicio);
 	return 0;
 
@@ -105,9 +104,9 @@ int sacRmdir(const char *ruta){
 static int sacAbrir(const char *ruta, struct fuse_file_info *fi) {
 
 	int tamanio = strlen(ruta);
-	soloRuta* inicio = malloc(sizeof(soloRuta));
+	SoloRuta* inicio = malloc(sizeof(SoloRuta));
 	memcpy(inicio->rutaDirectorio,ruta, tamanio);
-	SocketCommons_SendData(socketConectado, ABRIRDIR, inicio, sizeof(soloRuta));
+	SocketCommons_SendData(socketConectado, ABRIRDIR, inicio, sizeof(SoloRuta));
 	free(inicio);
 	return 0;
 }
@@ -116,9 +115,9 @@ static int sacLeer(const char *ruta, char *buffer, size_t size, off_t offset, st
 
 
 	int tamanio = strlen(ruta);
-	soloRuta* inicio = malloc(sizeof(soloRuta));
+	SoloRuta* inicio = malloc(sizeof(SoloRuta));
 	memcpy(inicio->rutaDirectorio,ruta, tamanio);
-	SocketCommons_SendData(socketConectado, LEERFILE, inicio, sizeof(soloRuta));
+	SocketCommons_SendData(socketConectado, LEERFILE, inicio, sizeof(SoloRuta));
 	free(inicio);
 
 	return 0;
@@ -126,23 +125,35 @@ static int sacLeer(const char *ruta, char *buffer, size_t size, off_t offset, st
 
 int sacCrear(const char ruta, mode_t mode, struct fuse_file_info *fi){
 	int tamanio = strlen(ruta);
-	soloRuta* inicio = malloc(sizeof(soloRuta));
+	SoloRuta* inicio = malloc(sizeof(SoloRuta));
 	memcpy(inicio->rutaDirectorio,ruta, tamanio);
-	SocketCommons_SendData(socketConectado, CREARFILE, inicio, sizeof(soloRuta));
+	SocketCommons_SendData(socketConectado, CREARFILE, inicio, sizeof(SoloRuta));
 	free(inicio);
 	return 0;
 }
 
 int sacUnlink(const char *ruta){
 	int tamanio = strlen(ruta);
-	soloRuta* inicio = malloc(sizeof(soloRuta));
+	SoloRuta* inicio = malloc(sizeof(SoloRuta));
 	memcpy(inicio->rutaDirectorio,ruta, tamanio);
-	SocketCommons_SendData(socketConectado, BORRARFILE, inicio, sizeof(soloRuta));
+	SocketCommons_SendData(socketConectado, BORRARFILE, inicio, sizeof(SoloRuta));
 	free(inicio);
 	return 0;
 }
 
 int sacEscribir (const char ruta, const char data, size_t size, off_t offset, struct fuse_file_info *fi) {
+	int tamanio = strlen(ruta);
+	Escribir* inicio = malloc(sizeof(Escribir));
+	memcpy(inicio->rutaDirectorio,ruta, tamanio);
+	memcpy(inicio->size,size, sizeof(size_t));
+	memcpy(inicio->offset,offset, sizeof(off_t));
+	int tamanioTotal  = (sizeof(Escribir) + size);
+	const char* dataTotal = malloc(tamanioTotal);
+	memcpy(dataTotal,inicio,sizeof(Escribir));
+	memcpy( (dataTotal + sizeof(Escribir)), data , size );
+	SocketCommons_SendData(socketConectado, ESCRIBIRFILE, inicio, tamanioTotal);
+	free(dataTotal);
+	free(inicio);
 	return 0;
 }
 
@@ -219,8 +230,10 @@ int main(int argc, char *argv[]) {
 
 	int algo;
 	char* ruta = "/PrimerDirectorio/SegundoDirectorio/TercerDirectorio/PasaPorElSocketPorFavor";
-	algo = sacMkdir(ruta, S_IFDIR);
+	char* ruta2 = "/PrimerDirectorio/SegundoDirectorio";
+	//algo = sacMkdir(ruta, S_IFDIR);
 	//algo = sacRmdir(ruta);
+	algo = sacLeerDir(ruta2,NULL,NULL,NULL,NULL);
 
 	config_destroy(fuseConfig);
 

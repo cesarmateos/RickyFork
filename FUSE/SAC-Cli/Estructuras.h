@@ -20,7 +20,13 @@ typedef char rutaArchivo[GFILENAMELENGTH*100];
 
 typedef struct{
 	rutaArchivo rutaDirectorio;
-}soloRuta;
+}SoloRuta;
+
+typedef struct{
+	rutaArchivo rutaDirectorio;
+	size_t size;
+	off_t offset;
+}Escribir;
 
 typedef struct sac_file_t { // un cuarto de bloque (256 bytes)
         uint8_t state; // 0: borrado, 1: archivo, 2: directorio

@@ -21,3 +21,5 @@ void separar(char*ruta, char* sobrante, char* extracto);
 void tablaOFF(char* ruta);
 
 void librearPunterosABloques(GFile tabla, int primerPosicion);
+
+void llenarPunterosABloques(GFile tabla, int primerPosicion,void* datos, size_t tamanio);
