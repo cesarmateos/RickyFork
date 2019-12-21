@@ -39,7 +39,7 @@
 typedef uint32_t ptrGBloque;
 typedef int nroTabla;
 typedef char nombreArchivo[GFILENAMELENGTH];
-typedef char rutaArchivo[GFILENAMELENGTH*100];
+typedef char rutaArchivo[GFILENAMELENGTH*50];
 
 typedef struct sac_header_t { // un bloque
         char sac[3];

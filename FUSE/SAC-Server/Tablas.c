@@ -67,7 +67,7 @@ void crearPunterosIndirectosOLd(GFile *tabla, int cantidad){
 
 
 int localizarTablaArchivo(char* ruta){
-	if(strlen(ruta) == 0){
+	if(ruta == "/"){
 		return 0;
 	}
 	nroTabla numeroTablaPadre = 0;

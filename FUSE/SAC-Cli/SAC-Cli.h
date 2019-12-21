@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include "Estructuras.h"
+#include "utils.h"
 
 char* puerto;
 

@@ -16,6 +16,10 @@ void alRecibirConexion(int socketID){
 	printf("Conexion entrante en %d \n",socketID);
 }
 
+void alDesconcetarCliente(int socketID){
+	close(socketID);
+}
+
 void alRecibirPaquete(int socketID, int messageType, void* actualData){
 
 	switch(messageType){
@@ -36,6 +40,7 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 		case BORRARDIR:
 		{
 			borrarDirectorioVacio( ((SoloRuta*)actualData)->rutaDirectorio);
+			//close(socketID);
 			break;
 		}
 		case ABRIRDIR:
@@ -45,10 +50,15 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 		}
 		case ATRIBUTOS:
 		{
-			GFile tabla;
+			GFile* tabla = malloc(sizeof(GFile));
 			nroTabla nroTabla = localizarTablaArchivo( ((SoloRuta*)actualData)->rutaDirectorio);
-			tabla = *(mapTablas + nroTabla);
-			//SocketCommons_SendData(sock,DEVUELVETABLA,tabla,sizeof(GFile));
+			if(nroTabla == -1){
+				tabla->tablaPadre = -2;
+			}else{
+			*tabla = *(mapTablas + nroTabla);
+			}
+			SocketCommons_SendData(socketID,DEVUELVETABLA,tabla,sizeof(GFile));
+			free(tabla);
 			break;
 		}
 		case ABRIRFILE:
@@ -101,9 +111,13 @@ void iniciarServer(void){
 
 	evento->OnPacketArrived = alRecibirPaquete;
 
+	evento->OnClientDisconnect = alDesconcetarCliente;
+
 	SocketServer_ListenForConnection(*evento);
 
 	config_destroy(fuseConfig);
 
+
+	//iniciarServidor();
 }
 
