@@ -72,19 +72,23 @@ t_list* cargarsemaforos(int size){
 }
 
 //inicializacion de programa
-T_programa crearPrograma(int identificador,int numerodeprograma){
+void crearPrograma(int identificador,int numerodeprograma){
 	T_programa programa;
 	programa.identificador = identificador;
 	programa.numeroDePrograma = numerodeprograma;
 	programa.ready = list_create();
-	return programa;
+	T_programa* p = malloc(sizeof(T_programa));
+	*p = programa;
+	list_add(listaProgramas,p);
+	Logger_Log(LOG_INFO,"se cargo el programa %d",programa.identificador);
+
 }
 
 void ejecutarHilo(T_programa* programa,T_hilo* hiloAejecutar){
 	programa->exec = hiloAejecutar;
 }
 //inicializacion de hilo
-T_hilo crearHilo(int identificador,int pid,double tiempoEstimado){
+void crearHilo(int identificador,int pid,double tiempoEstimado){
 	T_hilo hilo;
 	time_t tiempoactual;
 	time(&tiempoactual);
@@ -93,7 +97,10 @@ T_hilo crearHilo(int identificador,int pid,double tiempoEstimado){
 	hilo.tiempoDeEjecucion = tiempoactual;
 	hilo.tiempoEstimado = tiempoEstimado;
 	hilo.tiempoReal = 0;
-	return hilo;
+	T_hilo* h = malloc(sizeof(T_hilo));
+	*h = hilo;
+	list_add(new,h);
+	Logger_Log(LOG_INFO,"se cargo el hilo en new %d",hilo.identificador);
 }
 //se carga al estado new los hilos este estado compartidos por todos lo hilos de los programas desde este estado pasa al ready de cada programa
 void cargarhiloAnew(T_hilo* hilo,t_list* new){
@@ -153,8 +160,11 @@ T_hilo* encontrarHilo(int tid,t_list* lista){
 void cargarhilos(t_list* new,t_list* listaProgramas){
 	while(list_size(new) != 0){
 		sem_wait(&sem);
-		T_hilo* hiloAagregar = list_remove(new,0);
-		T_programa* programa = encontrarPrograma(hiloAagregar->pid,listaProgramas);
+		T_hilo* hiloAagregar = malloc(sizeof(T_hilo));
+		hiloAagregar = list_remove(new,0);
+		T_programa* programa = malloc(sizeof(T_programa));
+		programa = encontrarPrograma(hiloAagregar->pid,listaProgramas);
+		Logger_Log(LOG_INFO,"%d\n",programa->identificador);
 		Logger_Log(LOG_INFO,"se cargo el hilo %d en el programa %d\n",hiloAagregar->identificador,programa->numeroDePrograma);
 		list_add(programa->ready,hiloAagregar);
 		if(list_size(programa->ready) > 2)
@@ -199,20 +209,15 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 	switch (messageType){
 	case INICIAR:
 	{
-		ContentHeader* header = SocketCommons_ReceiveHeader(socketID,NULL);
-		int* a = SocketCommons_ReceiveData(socketID,INICIAR,NULL);
-		T_programa programa = crearPrograma(socketID,i);
-		CargarPrograma(&programa,listaProgramas);
+
+
 		printf("hola");
 		i++;
 		break;
 	}
 	case CARGARHILO:
 	{
-		T_programa programa = crearPrograma(socketID,i);
-		list_add(listaProgramas,&programa);
-		T_hilo hilo = crearHilo((int*)actualData,socketID,0);
-		cargarhiloAnew(&hilo,new);
+		crearHilo((int*)actualData,socketID,0);
 		cargarhilos(new,listaProgramas);
 
 		break;
@@ -247,8 +252,7 @@ void alrecibirPaquete(int socketID, int messageType, void* actualData){
 }
 void alRecibirConexion(int socketID){
 	//t_list* listaProgramas = list_create();
-	T_programa programa = crearPrograma(socketID,i);
-	CargarPrograma(&programa,listaProgramas);
+	crearPrograma(socketID,i);
 }
 void iniciarServidor(){
 	SocketServer_Start("SUSE",3801);
