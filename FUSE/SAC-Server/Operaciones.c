@@ -290,7 +290,7 @@ void crearDirectorio(char* ruta){
 char** leerDirectorio(char* ruta){
 
 	if(existe(ruta)){
-		nroTabla numeroTabla = 0;
+		nroTabla numeroTabla = localizarTablaArchivo(ruta);
 		char** listadoDeArchivos = calloc(GFILEBYTABLE,sizeof(char*));
 		int j = 0;
 		for(int i = 0 ; i < GFILEBYTABLE ; i++){
@@ -365,7 +365,7 @@ bool existe(char* ruta){
 	}
 	GFile tabla;
 	tabla = devolverTabla(numeroTabla);
-	if(tabla.state > 0 ){
+	if(tabla.state == 0 ){
 		return false;
 	}
 	return true;

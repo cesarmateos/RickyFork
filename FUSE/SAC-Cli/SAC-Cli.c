@@ -9,44 +9,45 @@ int conexion;
 
 static int sacGetAttr(const char *ruta, struct stat *stbuf){
 
-	socketConectado = SocketClient_ConnectToServer(puerto);
-
-	int tamanio = strlen(ruta);
-	SoloRuta* inicio = malloc(sizeof(SoloRuta));
-	memcpy(inicio->rutaDirectorio,ruta, tamanio);
-	SocketCommons_SendData(socketConectado, ATRIBUTOS, inicio, sizeof(SoloRuta));
-	free(inicio);
-
-	GFile* tabla = malloc(sizeof(GFile));
-	tabla = SocketCommons_ReceiveData(socketConectado, DEVUELVETABLA, 0);
-	close(socketConectado);
-
 	int res = 0;
 
 	memset(stbuf, 0, sizeof(struct stat));
 
 
-	if (strcmp(ruta, "/") == 0) {		//Si ruta es igual a "/" nos estan pidiendo los atributos del punto de montaje
+	if (strcmp(ruta, "/") == 0) {
 		stbuf->st_mode = S_IFDIR | 0755;
 		stbuf->st_nlink = 2;
-		free(tabla);
-	} else if(tabla->tablaPadre == -2){
-		res = -ENOENT;
-		free(tabla);
-	} else{
+	}else{
 
-		if(tabla->state == 2){
-			stbuf->st_mode = S_IFDIR | 0755;
-			stbuf->st_nlink = 2;
+		GFile* tabla = malloc(sizeof(GFile));
+		socketConectado = SocketClient_ConnectToServer(puerto);
+		int tamanio = strlen(ruta);
+		SoloRuta* inicio = malloc(sizeof(SoloRuta));
+		memcpy(inicio->rutaDirectorio,ruta, tamanio);
+		SocketCommons_SendData(socketConectado, ATRIBUTOS, inicio, sizeof(SoloRuta));
+		free(inicio);
+		int* algo = malloc(sizeof(int));
+		*algo = 11;
+		tabla = SocketCommons_ReceiveData(socketConectado, algo, 0);
+		free(algo);
+		close(socketConectado);
+
+		if(tabla->tablaPadre == -2){
+			res = -ENOENT;
+			free(tabla);
 		}else{
-			stbuf->st_mode = S_IFREG | 0444;
-			stbuf->st_size = tabla->file_size;
-			stbuf->st_nlink = 1;
+
+			if(tabla->state == 2){
+				stbuf->st_mode = S_IFDIR | 0755;
+				stbuf->st_nlink = 2;
+			}else{
+				stbuf->st_mode = S_IFREG | 0444;
+				stbuf->st_size = tabla->file_size;
+				stbuf->st_nlink = 1;
+			}
+			free(tabla);
 		}
-		free(tabla);
-
 	}
-
 
 	return res;
 }
@@ -84,18 +85,25 @@ static int sacLeerDir(const char *ruta, void *buffer, fuse_fill_dir_t filler, of
 	SocketCommons_SendData(socketConectado, LEERDIR, inicio, sizeof(SoloRuta));
 
 	int* error_status = NULL;
-	nombreArchivo* listaDeArchivos;
+	char** listaDeArchivos;
 
 	free(inicio);
-	listaDeArchivos = SocketCommons_ReceiveData(socketConectado, LISTADOARCHIVOS, error_status);
+	int* algo = malloc(sizeof(int));
+	*algo = 12;
+	listaDeArchivos = SocketCommons_ReceiveData(socketConectado, algo, error_status);
 
 	int i = 0;
 
 	filler(buffer, ".", NULL, 0);
 	filler(buffer, "..", NULL, 0);
+	/*
 	while((listaDeArchivos + i) != NULL){
 		filler(buffer, *(listaDeArchivos +i), NULL, 0);
+		i++;
 	}
+	*/
+
+	filler(buffer, listaDeArchivos[0], NULL, 0);
 
 	close(socketConectado);
 	return 0;
@@ -291,8 +299,6 @@ int main(int argc, char *argv[]) {
 
 /*
 
-	//crear_conexion("127.0.0.1",puerto);
-
 	int algo;
 	char* ruta = "/PrimerDirectorio/SegundoDirectorio/TercerDirectorio/PasaPorElSocketPorFavor";
 	char* ruta2 = "/PrimerDirectorio/SegundoDirectorio";
@@ -305,5 +311,6 @@ int main(int argc, char *argv[]) {
 
 /*
 */
+	//sacLeerDir("/",NULL,NULL,NULL,NULL);
 	return 0;
 }

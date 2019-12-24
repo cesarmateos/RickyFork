@@ -26,9 +26,9 @@ void alRecibirPaquete(int socketID, int messageType, void* actualData){
 		case LEERDIR:
 		{
 			char** ls = malloc(sizeof(rutaArchivo));
-			ls = leerDirectorio(actualData);
-			printf("Se leyó el directorio %s :", ls);
-			SocketCommons_SendData(sock,LISTADOARCHIVOS,ls,10000); //SACAR EL HARDCODEO
+			ls = leerDirectorio( ((SoloRuta*)actualData)->rutaDirectorio);
+			printf("Se leyó el directorio %s :", ((SoloRuta*)actualData)->rutaDirectorio);
+			SocketCommons_SendData(socketID,LISTADOARCHIVOS,ls,10000); //SACAR EL HARDCODEO
 			break;
 		}
 		case CREARDIR:
